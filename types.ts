@@ -4,6 +4,20 @@ export type CalendarViewType = 'month' | 'week' | 'day' | 'agenda';
 
 export type EventCategory = 'client' | 'work' | 'personal' | 'focus' | 'travel';
 
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface AvailabilitySettings {
+  bufferMinutes: number; // e.g. 15 min between meetings
+  startHour: string; // "08:30"
+  endHour: string; // "18:00"
+  workDays: number[]; // [1, 2, 3, 4, 5] (Mon-Fri)
+  maxDailyBookings: number; // e.g. 5
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -20,6 +34,8 @@ export interface CalendarEvent {
   clientName?: string;
   clientEmail?: string;
   clientPhone?: string;
+  checklist?: ChecklistItem[];
+  notes?: string;
   createdAt?: string;
 }
 
