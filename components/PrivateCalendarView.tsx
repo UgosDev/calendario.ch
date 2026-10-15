@@ -7,8 +7,23 @@ import {
   BookingRequest,
   ChecklistItem,
   AvailabilitySettings,
+  CalendarContextMode,
+  DailyPersonalTask,
+  SwissDeadline,
+  FamilyMember,
+  CantonalSchoolHoliday,
+  WasteCollectionItem,
+  SwissWeekendForecast,
 } from '../types';
-import { CALENDAR_CATEGORIES } from '../mockData';
+import { 
+  CALENDAR_CATEGORIES, 
+  SWISS_DEADLINES, 
+  INITIAL_PERSONAL_TASKS,
+  FAMILY_MEMBERS,
+  CANTONAL_SCHOOL_HOLIDAYS,
+  WASTE_COLLECTION_SCHEDULE,
+  SWISS_WEEKEND_FORECASTS,
+} from '../mockData';
 import { downloadIcsFile, parseIcsContent } from '../icsGenerator';
 import {
   Calendar,
@@ -44,7 +59,17 @@ import {
   PieChart,
   Coffee,
   AlertCircle,
-  Command,
+  Home,
+  Heart,
+  Flag,
+  Users,
+  Sun,
+  Package,
+  Leaf,
+  Wine,
+  Trash,
+  QrCode,
+  Smartphone,
 } from 'lucide-react';
 
 interface PrivateCalendarViewProps {
@@ -74,11 +99,23 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
   const [selectedDate, setSelectedDate] = useState<string>('2026-10-19');
   const [viewType, setViewType] = useState<CalendarViewType>('week');
 
+  // Master Context Switch: 'personal' (Famiglia & Vita Privata) vs 'work' (Lavoro & Clienti) vs 'all' (Tutto)
+  const [contextMode, setContextMode] = useState<CalendarContextMode>('personal');
+
+  // Personal To-Do Tasks State
+  const [personalTasks, setPersonalTasks] = useState<DailyPersonalTask[]>(INITIAL_PERSONAL_TASKS);
+  const [newTaskInput, setNewTaskInput] = useState<string>('');
+
   // Filter categories state
   const [activeCategories, setActiveCategories] = useState<Record<EventCategory, boolean>>({
+    family: true,
+    health: true,
+    home_finance: true,
+    leisure: true,
+    personal: true,
+    holiday: true,
     client: true,
     work: true,
-    personal: true,
     focus: true,
     travel: true,
   });
@@ -109,14 +146,21 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
   const [formDate, setFormDate] = useState<string>('2026-10-19');
   const [formStartTime, setFormStartTime] = useState<string>('10:00');
   const [formEndTime, setFormEndTime] = useState<string>('11:00');
-  const [formCategory, setFormCategory] = useState<EventCategory>('work');
+  const [formCategory, setFormCategory] = useState<EventCategory>('family');
   const [formLocation, setFormLocation] = useState<string>('');
   const [formMeetUrl, setFormMeetUrl] = useState<string>('');
   const [formDescription, setFormDescription] = useState<string>('');
-  const [formIsPrivate, setFormIsPrivate] = useState<boolean>(false);
+  const [formIsPrivate, setFormIsPrivate] = useState<boolean>(true);
   const [formBlocksBooking, setFormBlocksBooking] = useState<boolean>(true);
   const [formChecklist, setFormChecklist] = useState<ChecklistItem[]>([]);
-  const [newCheckItemText, setNewCheckItemText] = useState<string>('');
+  const [formFamilyMemberId, setFormFamilyMemberId] = useState<string>('me');
+
+  // Family Members & Cantonal State
+  const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>('all');
+  const [selectedCanton, setSelectedCanton] = useState<string>('TI');
+  const [showFamilyShareModal, setShowFamilyShareModal] = useState<boolean>(false);
+  const [familyInviteEmail, setFamilyInviteEmail] = useState<string>('');
+  const [familyInviteSent, setFamilyInviteSent] = useState<boolean>(false);
 
   // Copy pill notification & file import input ref
   const [copiedLink, setCopiedLink] = useState(false);
@@ -133,15 +177,19 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
 
   // Hours displayed in day and week views
   const HOURS = [
-    '08:00', '09:00', '10:00', '11:00', '12:00',
+    '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
     '13:00', '14:00', '15:00', '16:00', '17:00',
-    '18:00', '19:00', '20:00'
+    '18:00', '19:00', '20:00', '21:00', '22:00'
   ];
+
+  // Helper to get category info
+  const getCatInfo = (cat: EventCategory) => {
+    return CALENDAR_CATEGORIES.find((c) => c.id === cat) || CALENDAR_CATEGORIES[0];
+  };
 
   // Keyboard Shortcuts (T: Today, W: Week, M: Month, D: Day, A: Agenda, C: Create, K: Search)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing inside input, textarea, or modal is open
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) {
         if (e.key === 'Escape') {
           setShowSearchModal(false);
@@ -149,6 +197,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
           setShowDetailModal(false);
           setShowRulesModal(false);
           setShowSyncModal(false);
+          setShowFamilyShareModal(false);
         }
         return;
       }
@@ -177,6 +226,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
         setShowDetailModal(false);
         setShowRulesModal(false);
         setShowSyncModal(false);
+        setShowFamilyShareModal(false);
       }
     };
 
@@ -184,10 +234,21 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedDate]);
 
-  // Filtered events based on active category checkboxes
+  // Filtered events based on active category checkboxes, contextMode, and selected family member
   const filteredEvents = useMemo(() => {
-    return events.filter((e) => activeCategories[e.category]);
-  }, [events, activeCategories]);
+    return events.filter((e) => {
+      if (!activeCategories[e.category]) return false;
+      const cat = getCatInfo(e.category);
+      if (contextMode === 'personal' && cat.group === 'work') return false;
+      if (contextMode === 'work' && cat.group === 'personal') return false;
+      if (selectedFamilyMember !== 'all') {
+        if (e.familyMemberId && e.familyMemberId !== selectedFamilyMember) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [events, activeCategories, contextMode, selectedFamilyMember]);
 
   // Search results
   const searchResults = useMemo(() => {
@@ -306,16 +367,14 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
     const [h, m] = (timeStr || '10:00').split(':').map(Number);
     const endH = String(Math.min(23, h + 1)).padStart(2, '0');
     setFormEndTime(`${endH}:${String(m).padStart(2, '0')}`);
-    setFormCategory('work');
-    setFormLocation('Sede MT Financial Bioggio');
+    setFormCategory(contextMode === 'work' ? 'work' : 'family');
+    setFormLocation('');
     setFormMeetUrl('');
     setFormDescription('');
-    setFormIsPrivate(false);
+    setFormIsPrivate(true);
     setFormBlocksBooking(true);
-    setFormChecklist([
-      { id: 'chk-1', text: 'Preparare cartella e fascicolo cliente', done: false },
-      { id: 'chk-2', text: 'Verificare coperture attuali', done: false },
-    ]);
+    setFormChecklist([]);
+    setFormFamilyMemberId(selectedFamilyMember !== 'all' ? selectedFamilyMember : 'me');
     setShowCreateModal(true);
   };
 
@@ -333,6 +392,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
     setFormIsPrivate(evt.isPrivate);
     setFormBlocksBooking(evt.blocksBooking);
     setFormChecklist(evt.checklist || []);
+    setFormFamilyMemberId(evt.familyMemberId || 'me');
     setShowDetailModal(false);
     setShowCreateModal(true);
   };
@@ -362,6 +422,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
         isPrivate: formIsPrivate,
         blocksBooking: formBlocksBooking,
         checklist: formChecklist,
+        familyMemberId: formFamilyMemberId || undefined,
       };
       onUpdateEvent(updated);
     } else {
@@ -378,12 +439,34 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
         isPrivate: formIsPrivate,
         blocksBooking: formBlocksBooking,
         checklist: formChecklist,
+        familyMemberId: formFamilyMemberId || undefined,
         createdAt: new Date().toISOString(),
       };
       onAddEvent(newEvent);
     }
 
     setShowCreateModal(false);
+  };
+
+  // Personal To-Do handlers
+  const togglePersonalTask = (taskId: string) => {
+    setPersonalTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, completed: !t.completed } : t))
+    );
+  };
+
+  const handleCreateTask = (text: string) => {
+    if (!text.trim()) return;
+    const newTask: DailyPersonalTask = {
+      id: `task-${Date.now()}`,
+      title: text.trim(),
+      date: selectedDate,
+      completed: false,
+      priority: 'medium',
+      category: 'home',
+    };
+    setPersonalTasks((prev) => [newTask, ...prev]);
+    setNewTaskInput('');
   };
 
   // Toggle checklist item status in Detail Modal
@@ -402,24 +485,6 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
       setSelectedEvent(updated);
       onUpdateEvent(updated);
     }
-  };
-
-  // Add checklist item in detail modal
-  const addDetailChecklistItem = (text: string) => {
-    if (!selectedEvent || !text.trim()) return;
-    const currentList = selectedEvent.checklist ? [...selectedEvent.checklist] : [];
-    currentList.push({
-      id: `chk-${Date.now()}`,
-      text: text.trim(),
-      done: false,
-    });
-    const updated: CalendarEvent = {
-      ...selectedEvent,
-      checklist: currentList,
-    };
-    setSelectedEvent(updated);
-    onUpdateEvent(updated);
-    setNewCheckItemText('');
   };
 
   // Copy public link
@@ -462,58 +527,6 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
     e.target.value = '';
   };
 
-  // Helper to get category info
-  const getCatInfo = (cat: EventCategory) => {
-    return CALENDAR_CATEGORIES.find((c) => c.id === cat) || CALENDAR_CATEGORIES[0];
-  };
-
-  // Calculate deep productivity analytics
-  const weeklyAnalytics = useMemo(() => {
-    const weekDateStrings = currentWeekDays.map((d) => d.dateStr);
-    const weekEvents = events.filter((e) => weekDateStrings.includes(e.date));
-
-    let totalMinutes = 0;
-    let categoryMinutes: Record<EventCategory, number> = {
-      client: 0,
-      work: 0,
-      personal: 0,
-      focus: 0,
-      travel: 0,
-    };
-
-    weekEvents.forEach((evt) => {
-      const [sh, sm] = evt.startTime.split(':').map(Number);
-      const [eh, em] = evt.endTime.split(':').map(Number);
-      const dur = Math.max(15, (eh * 60 + em) - (sh * 60 + sm));
-      totalMinutes += dur;
-      categoryMinutes[evt.category] = (categoryMinutes[evt.category] || 0) + dur;
-    });
-
-    const totalHours = (totalMinutes / 60).toFixed(1);
-    const clientHours = (categoryMinutes.client / 60).toFixed(1);
-    const workHours = (categoryMinutes.work / 60).toFixed(1);
-    const focusHours = (categoryMinutes.focus / 60).toFixed(1);
-    const personalHours = (categoryMinutes.personal / 60).toFixed(1);
-
-    // Calculate estimated economic value in CHF
-    const estimatedValueChf = weekEvents.reduce((acc, evt) => {
-      if (evt.category === 'client') return acc + 150; // standard consultation value
-      return acc;
-    }, 0);
-
-    return {
-      totalHours,
-      clientHours,
-      workHours,
-      focusHours,
-      personalHours,
-      totalCount: weekEvents.length,
-      estimatedValueChf,
-      categoryMinutes,
-      totalMinutes: Math.max(totalMinutes, 1),
-    };
-  }, [events, currentWeekDays]);
-
   return (
     <div className="py-6 sm:py-8 max-w-7xl mx-auto px-4 sm:px-6">
       {/* Hidden file input for ICS upload */}
@@ -538,73 +551,82 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
         </div>
       )}
 
-      {/* Top Banner Reassurance & Shortcuts Bar */}
-      <div className="mb-6 p-4 sm:p-5 rounded-2xl border border-neutral-900 bg-neutral-950/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Top Bar: Master Mode Switcher (Personale vs Lavoro vs Tutto) */}
+      <div className="mb-6 p-4 sm:p-5 rounded-3xl border border-neutral-900 bg-neutral-950/80 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold shadow-md shrink-0">
-            <Lock size={18} />
+          <div className="w-10 h-10 rounded-2xl bg-white text-black flex items-center justify-center font-bold shadow-md shrink-0">
+            {contextMode === 'personal' ? <Home size={18} /> : contextMode === 'work' ? <Briefcase size={18} /> : <Layers size={18} />}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-bold text-white tracking-tight">
-                Agenda Privata & Calendario Personale
+                {contextMode === 'personal'
+                  ? 'Il Tuo Calendario Personale & Famiglia'
+                  : contextMode === 'work'
+                  ? 'Agenda Professionale & Studio'
+                  : 'Panoramica Completa Vita & Lavoro'}
               </h1>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold flex items-center gap-1">
                 <ShieldCheck size={11} />
-                <span>nLPD Svizzera · Server Zurigo</span>
+                <span>Zero Profilazione · Server Zurigo</span>
               </span>
             </div>
             <p className="text-xs text-neutral-400 mt-0.5">
-              I tuoi appuntamenti personali, le riunioni e le consulenze clienti in un unico posto. Gli impegni contrassegnati come <strong>Privati</strong> bloccano automaticamente gli slot sul tuo link pubblico senza mostrare dettagli.
+              {contextMode === 'personal'
+                ? 'Sport, visite mediche, scuola dei figli, scadenze svizzere e tempo libero al sicuro in Svizzera.'
+                : contextMode === 'work'
+                ? 'Consulenze, appuntamenti clienti, riunioni interne e slot orari sincronizzati con il tuo booking pubblico.'
+                : 'La perfetta armonia tra impegni privati e lavoro: la tua vita personale protegge i tuoi orari lavorativi.'}
             </p>
           </div>
         </div>
 
+        {/* Master Context Mode Pill Tabs */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {/* Quick Search Button (Cmd+K) */}
+          <div className="flex items-center p-1 rounded-2xl bg-neutral-900 border border-neutral-800 text-xs">
+            <button
+              onClick={() => setContextMode('personal')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+                contextMode === 'personal'
+                  ? 'bg-white text-black font-bold shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <Home size={13} />
+              <span>Personale & Casa</span>
+            </button>
+            <button
+              onClick={() => setContextMode('work')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+                contextMode === 'work'
+                  ? 'bg-white text-black font-bold shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <Briefcase size={13} />
+              <span>Lavoro & Clienti</span>
+            </button>
+            <button
+              onClick={() => setContextMode('all')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+                contextMode === 'all'
+                  ? 'bg-white text-black font-bold shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <Layers size={13} />
+              <span>Tutto Insieme</span>
+            </button>
+          </div>
+
+          {/* Quick Actions */}
           <button
             onClick={() => setShowSearchModal(true)}
-            className="px-3 py-2 rounded-xl border border-neutral-800 hover:border-neutral-700 bg-neutral-900 text-neutral-300 hover:text-white text-xs font-medium transition-all flex items-center gap-2"
-            title="Cerca in agenda (Scorciatoia: / o ⌘K)"
+            className="p-2 rounded-xl border border-neutral-800 hover:border-neutral-700 bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
+            title="Cerca in agenda (⌘K o /)"
           >
-            <Search size={13} />
-            <span className="hidden sm:inline">Cerca</span>
-            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-mono rounded bg-neutral-950 text-neutral-500 border border-neutral-800">
-              ⌘K
-            </kbd>
+            <Search size={15} />
           </button>
-
-          {/* Buffer & Rules Button */}
-          <button
-            onClick={() => setShowRulesModal(true)}
-            className="px-3 py-2 rounded-xl border border-neutral-800 hover:border-neutral-700 bg-neutral-900 text-neutral-300 hover:text-white text-xs font-medium transition-all flex items-center gap-1.5"
-            title="Regole orari e buffer time tra incontri"
-          >
-            <Sliders size={13} />
-            <span className="hidden sm:inline">Buffer & Regole</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-          </button>
-
-          {/* Sync / Webcal */}
-          <button
-            onClick={() => setShowSyncModal(true)}
-            className="px-3 py-2 rounded-xl border border-neutral-800 hover:border-neutral-700 bg-neutral-900 text-neutral-300 hover:text-white text-xs font-medium transition-all flex items-center gap-1.5"
-          >
-            <Share2 size={13} />
-            <span>Feed Webcal</span>
-          </button>
-
-          {/* Import ICS */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="px-3 py-2 rounded-xl border border-neutral-800 hover:border-neutral-700 bg-neutral-900 text-neutral-300 hover:text-white text-xs font-medium transition-all flex items-center gap-1.5"
-            title="Importa file .ics da Outlook, Apple o Google"
-          >
-            <Upload size={13} />
-            <span className="hidden sm:inline">Importa .ics</span>
-          </button>
-
-          {/* New Event */}
           <button
             onClick={() => openCreateModal()}
             className="px-4 py-2 rounded-xl bg-white text-black hover:bg-neutral-200 text-xs font-bold transition-all shadow-md flex items-center gap-1.5 active:scale-95"
@@ -615,10 +637,94 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
         </div>
       </div>
 
+      {/* BARRA FAMIGLIA & CANTONI (Attiva in modalità Personale o Tutto) */}
+      {(contextMode === 'personal' || contextMode === 'all') && (
+        <div className="mb-6 p-4 rounded-2xl border border-neutral-900 bg-neutral-950/70 backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          {/* Family Member Badges */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-mono text-neutral-400 flex items-center gap-1.5 mr-1">
+              <Users size={14} className="text-pink-400" />
+              <span>Famiglia:</span>
+            </span>
+            <button
+              onClick={() => setSelectedFamilyMember('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                selectedFamilyMember === 'all'
+                  ? 'bg-white text-black shadow-sm'
+                  : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
+              }`}
+            >
+              Tutti (4)
+            </button>
+            {FAMILY_MEMBERS.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setSelectedFamilyMember(m.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-2 ${
+                  selectedFamilyMember === m.id
+                    ? 'bg-neutral-800 text-white font-bold border border-neutral-600 shadow-sm'
+                    : 'bg-neutral-900/80 text-neutral-400 hover:text-white border border-neutral-800'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }}></span>
+                <span>{m.name}</span>
+                <span className="text-[10px] text-neutral-500 font-normal hidden sm:inline">({m.role.split('·')[0].trim()})</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Canton & Family Share Trigger */}
+          <div className="flex items-center gap-2.5 self-end md:self-center">
+            {/* Canton Selector */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-xs">
+              <span className="text-[11px] font-mono text-neutral-400">Cantone:</span>
+              <select
+                value={selectedCanton}
+                onChange={(e) => setSelectedCanton(e.target.value)}
+                className="bg-transparent text-white font-semibold outline-none cursor-pointer text-xs"
+              >
+                <option value="TI" className="bg-black text-white">🇨🇭 TI · Ticino</option>
+                <option value="GR" className="bg-black text-white">🇨🇭 GR · Grigioni</option>
+                <option value="ZH" className="bg-black text-white">🇨🇭 ZH · Zurigo</option>
+                <option value="VD" className="bg-black text-white">🇨🇭 VD · Vaud</option>
+                <option value="GE" className="bg-black text-white">🇨🇭 GE · Ginevra</option>
+              </select>
+            </div>
+
+            <button
+              onClick={() => setShowFamilyShareModal(true)}
+              className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 text-neutral-200 hover:text-white text-xs font-medium transition-all flex items-center gap-1.5 shadow-sm"
+            >
+              <Smartphone size={13} className="text-emerald-400" />
+              <span>Condividi con Famiglia</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Cantonal School Holiday Banner */}
+      {selectedCanton === 'TI' && (contextMode === 'personal' || contextMode === 'all') && (
+        <div className="mb-6 p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800/80 flex items-center justify-between text-xs animate-in fade-in duration-300">
+          <div className="flex items-center gap-2.5">
+            <span className="p-1.5 rounded-lg bg-pink-500/10 text-pink-400 border border-pink-500/20">
+              <CalendarDays size={14} />
+            </span>
+            <div>
+              <span className="font-bold text-white">Vacanze d’Autunno DECS Canton Ticino: </span>
+              <span className="text-neutral-300">24 Ottobre – 01 Novembre 2026</span>
+              <span className="text-neutral-500 ml-2 hidden sm:inline">(Scuole dell’obbligo e licei cantonali chiusi)</span>
+            </div>
+          </div>
+          <span className="hidden sm:inline font-mono text-[10px] px-2 py-0.5 rounded bg-neutral-900 text-neutral-400 border border-neutral-800">
+            Tra 5 giorni
+          </span>
+        </div>
+      )}
+
       {/* Main Grid: Sidebar + Calendar Canvas */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Control Sidebar */}
-        <aside className="lg:col-span-3 space-y-6">
+        <aside className="lg:col-span-3 space-y-5">
           {/* Mini Month Picker */}
           <div className="p-4 rounded-2xl border border-neutral-900 bg-[#0a0a0a]">
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-neutral-900">
@@ -677,11 +783,162 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
             </div>
           </div>
 
+          {/* WIDGET PERSONALE 1: Cose da Fare Oggi (To-Do Personali) */}
+          {(contextMode === 'personal' || contextMode === 'all') && (
+            <div className="p-4 rounded-2xl border border-neutral-900 bg-[#0a0a0a] space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-900">
+                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <CheckSquare size={13} className="text-emerald-400" />
+                  <span>Attività & To-Do di Giornata</span>
+                </div>
+                <span className="text-[10px] font-mono text-neutral-500">
+                  {personalTasks.filter((t) => t.completed).length}/{personalTasks.length}
+                </span>
+              </div>
+
+              <div className="space-y-1.5 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
+                {personalTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    onClick={() => togglePersonalTask(task.id)}
+                    className="flex items-center gap-2 p-2 rounded-xl bg-neutral-950/70 hover:bg-neutral-900 border border-neutral-900/80 transition-colors cursor-pointer text-xs"
+                  >
+                    {task.completed ? (
+                      <CheckSquare size={14} className="text-emerald-400 shrink-0" />
+                    ) : (
+                      <Square size={14} className="text-neutral-500 shrink-0" />
+                    )}
+                    <span
+                      className={`truncate text-[11px] ${
+                        task.completed ? 'line-through text-neutral-500' : 'text-neutral-200'
+                      }`}
+                    >
+                      {task.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add task inline */}
+              <div className="flex items-center gap-1.5 pt-1">
+                <input
+                  type="text"
+                  value={newTaskInput}
+                  onChange={(e) => setNewTaskInput(e.target.value)}
+                  placeholder="Aggiungi promemoria..."
+                  className="flex-1 px-2.5 py-1.5 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] text-white outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateTask(newTaskInput);
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => handleCreateTask(newTaskInput)}
+                  className="p-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-colors"
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* WIDGET PERSONALE 2: Scadenze Svizzere & Civiche */}
+          {(contextMode === 'personal' || contextMode === 'all') && (
+            <div className="p-4 rounded-2xl border border-neutral-900 bg-[#0a0a0a] space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-900">
+                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Flag size={13} className="text-red-500" />
+                  <span>Scadenze Elvetiche & Civiche 🇨🇭</span>
+                </div>
+                <span className="text-[10px] font-mono text-neutral-500">Ufficiali</span>
+              </div>
+
+              <div className="space-y-2">
+                {SWISS_DEADLINES.slice(0, 3).map((dl) => (
+                  <div
+                    key={dl.id}
+                    className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-900 space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[11px] text-white truncate max-w-[150px]">
+                        {dl.title}
+                      </span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-red-950/60 text-red-400 border border-red-900/60 font-semibold shrink-0">
+                        {dl.badge}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-neutral-400 line-clamp-2 leading-relaxed">
+                      {dl.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* WIDGET PERSONALE 3: Raccolta Rifiuti Comunale & Ecocentro */}
+          {(contextMode === 'personal' || contextMode === 'all') && (
+            <div className="p-4 rounded-2xl border border-neutral-900 bg-[#0a0a0a] space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-900">
+                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Package size={13} className="text-amber-400" />
+                  <span>Rifiuti Comunali & Ecocentro</span>
+                </div>
+                <span className="text-[10px] font-mono text-neutral-500">Bioggio/Lugano</span>
+              </div>
+
+              <div className="space-y-1.5">
+                {WASTE_COLLECTION_SCHEDULE.map((w) => (
+                  <div
+                    key={w.id}
+                    className="p-2 rounded-xl bg-neutral-950 border border-neutral-900 flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <div className="font-semibold text-white text-[11px]">{w.title}</div>
+                      <div className="text-[10px] text-neutral-400">{w.dayOfWeek}</div>
+                    </div>
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-neutral-900 text-neutral-300 border border-neutral-800">
+                      {w.badge.split('·')[0].trim()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* WIDGET PERSONALE 4: MeteoSvizzera Previsioni Weekend */}
+          {(contextMode === 'personal' || contextMode === 'all') && (
+            <div className="p-4 rounded-2xl border border-neutral-900 bg-[#0a0a0a] space-y-2.5">
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-900">
+                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Sun size={13} className="text-amber-400" />
+                  <span>Meteo Weekend Svizzera</span>
+                </div>
+                <span className="text-[10px] font-mono text-neutral-500">MeteoSvizzera</span>
+              </div>
+
+              <div className="space-y-2">
+                {SWISS_WEEKEND_FORECASTS.map((fc, i) => (
+                  <div key={i} className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-900 text-xs space-y-0.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-white text-[11px]">{fc.location}</span>
+                      <span className="font-mono text-[10px] text-amber-400">{fc.temp}</span>
+                    </div>
+                    <div className="text-[10px] text-neutral-300 font-medium">{fc.day} · {fc.condition}</div>
+                    <div className="text-[10px] text-neutral-500 italic">{fc.tip}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Calendars & Category Filters */}
           <div className="p-4 rounded-2xl border border-neutral-900 bg-[#0a0a0a] space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-neutral-900">
               <span className="text-xs font-bold text-white uppercase tracking-wider">
-                I Miei Calendari
+                {contextMode === 'personal' ? 'I Miei Calendari Personali' : 'I Miei Calendari'}
               </span>
               <span className="text-[10px] font-mono text-neutral-500">
                 {filteredEvents.length} impegni
@@ -689,7 +946,11 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              {CALENDAR_CATEGORIES.map((cat) => {
+              {CALENDAR_CATEGORIES.filter((cat) => {
+                if (contextMode === 'personal') return cat.group === 'personal' || cat.group === 'civic';
+                if (contextMode === 'work') return cat.group === 'work';
+                return true;
+              }).map((cat) => {
                 const isActive = activeCategories[cat.id];
                 const count = events.filter((e) => e.category === cat.id).length;
 
@@ -699,7 +960,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                     onClick={() =>
                       setActiveCategories((prev) => ({ ...prev, [cat.id]: !prev[cat.id] }))
                     }
-                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs transition-all ${
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-all ${
                       isActive
                         ? 'bg-neutral-900/60 text-white border border-neutral-800'
                         : 'text-neutral-500 hover:bg-neutral-900/30 border border-transparent'
@@ -720,102 +981,60 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
               })}
             </div>
 
-            {/* Buffer Time Status Indicator */}
-            <div className="pt-3 border-t border-neutral-900/80 text-[11px] text-neutral-400 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Coffee size={13} className="text-amber-400" />
+            {/* Sync Feeds / Webcal Reassurance */}
+            <div className="pt-3 border-t border-neutral-900/80 flex items-center justify-between text-[11px] text-neutral-400">
+              <button
+                onClick={() => setShowSyncModal(true)}
+                className="hover:text-white transition-colors flex items-center gap-1 font-medium"
+              >
+                <Share2 size={12} />
+                <span>Sincronizza iPhone / Mac</span>
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="hover:text-white transition-colors flex items-center gap-1 font-medium"
+              >
+                <Upload size={12} />
+                <span>Carica .ics</span>
+              </button>
+            </div>
+          </div>
+
+          {/* WIDGET PROFESSIONALE: Link Pubblico & Regole (Solo se in modalità work o all) */}
+          {(contextMode === 'work' || contextMode === 'all') && (
+            <div className="p-4 rounded-2xl border border-neutral-900 bg-[#0a0a0a] space-y-3">
+              <div className="text-xs font-bold text-white flex items-center justify-between">
+                <span>Vetrina Pubblica & Booking</span>
+                <button
+                  onClick={onOpenPublicBooking}
+                  className="text-[11px] text-neutral-400 hover:text-white flex items-center gap-1"
+                >
+                  <span>Apri</span>
+                  <ExternalLink size={11} />
+                </button>
+              </div>
+              <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800/80 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-mono text-neutral-300 truncate">
+                  calendario.ch/{profile.handle}
+                </span>
+                <button
+                  onClick={handleCopyLink}
+                  className="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-[10px] font-medium transition-colors shrink-0"
+                >
+                  {copiedLink ? 'Copiato!' : 'Copia'}
+                </button>
+              </div>
+              <div className="text-[11px] text-neutral-400 flex items-center justify-between pt-1">
                 <span>Buffer Incontri:</span>
-              </span>
-              <span className="font-mono text-white font-bold">{availabilityRules.bufferMinutes} min</span>
-            </div>
-          </div>
-
-          {/* Time & Productivity Allocation Bento Box */}
-          <div className="p-4 rounded-2xl border border-neutral-900 bg-[#0a0a0a] space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                <PieChart size={13} className="text-white" />
-                <span>Ripartizione Tempo Settimana</span>
-              </div>
-              <span className="text-[10px] font-mono text-neutral-400">
-                {weeklyAnalytics.totalHours}h tot
-              </span>
-            </div>
-
-            {/* Visual Progress Bar */}
-            <div className="w-full h-2 rounded-full bg-neutral-900 overflow-hidden flex">
-              <div
-                style={{ width: `${(weeklyAnalytics.categoryMinutes.client / weeklyAnalytics.totalMinutes) * 100}%` }}
-                className="bg-blue-500 h-full"
-                title={`Clienti: ${weeklyAnalytics.clientHours}h`}
-              ></div>
-              <div
-                style={{ width: `${(weeklyAnalytics.categoryMinutes.work / weeklyAnalytics.totalMinutes) * 100}%` }}
-                className="bg-neutral-200 h-full"
-                title={`Lavoro MT: ${weeklyAnalytics.workHours}h`}
-              ></div>
-              <div
-                style={{ width: `${(weeklyAnalytics.categoryMinutes.focus / weeklyAnalytics.totalMinutes) * 100}%` }}
-                className="bg-emerald-500 h-full"
-                title={`Focus: ${weeklyAnalytics.focusHours}h`}
-              ></div>
-              <div
-                style={{ width: `${(weeklyAnalytics.categoryMinutes.personal / weeklyAnalytics.totalMinutes) * 100}%` }}
-                className="bg-amber-500 h-full"
-                title={`Personale: ${weeklyAnalytics.personalHours}h`}
-              ></div>
-            </div>
-
-            {/* Breakdown numbers */}
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div className="p-2 rounded-xl bg-neutral-950 border border-neutral-900">
-                <div className="text-neutral-500 text-[10px]">Clienti / Consulenze</div>
-                <div className="font-bold text-blue-400 font-mono mt-0.5">{weeklyAnalytics.clientHours} ore</div>
-              </div>
-              <div className="p-2 rounded-xl bg-neutral-950 border border-neutral-900">
-                <div className="text-neutral-500 text-[10px]">Deep Work & Focus</div>
-                <div className="font-bold text-emerald-400 font-mono mt-0.5">{weeklyAnalytics.focusHours} ore</div>
+                <button
+                  onClick={() => setShowRulesModal(true)}
+                  className="font-mono text-white underline hover:text-neutral-200"
+                >
+                  {availabilityRules.bufferMinutes} min
+                </button>
               </div>
             </div>
-
-            {/* Economic value estimation */}
-            <div className="p-2.5 rounded-xl bg-gradient-to-r from-neutral-950 to-neutral-900 border border-neutral-800 flex items-center justify-between text-xs">
-              <span className="text-neutral-400 text-[11px]">Valore Consulenze Stimate:</span>
-              <strong className="text-white font-mono font-bold">CHF {weeklyAnalytics.estimatedValueChf}.-</strong>
-            </div>
-          </div>
-
-          {/* Public Booking Link Card */}
-          <div className="p-4 rounded-2xl border border-neutral-900 bg-[#0a0a0a] space-y-3">
-            <div className="text-xs font-bold text-white flex items-center justify-between">
-              <span>Link Pubblico Prenotazioni</span>
-              <button
-                onClick={onOpenPublicBooking}
-                className="text-[11px] text-neutral-400 hover:text-white flex items-center gap-1"
-              >
-                <span>Vedi</span>
-                <ExternalLink size={11} />
-              </button>
-            </div>
-            <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800/80 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-mono text-neutral-300 truncate">
-                calendario.ch/{profile.handle}
-              </span>
-              <button
-                onClick={handleCopyLink}
-                className="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-[10px] font-medium transition-colors shrink-0"
-              >
-                {copiedLink ? 'Copiato!' : 'Copia'}
-              </button>
-            </div>
-            <button
-              onClick={onOpenEmbedModal}
-              className="w-full py-2 rounded-xl border border-neutral-800 hover:border-neutral-700 bg-neutral-900/50 hover:bg-neutral-900 text-neutral-300 text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
-            >
-              <Share2 size={13} />
-              <span>Incorpora su pagine.ch</span>
-            </button>
-          </div>
+          )}
         </aside>
 
         {/* Main Calendar Viewport */}
@@ -995,11 +1214,11 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                                       {evt.startTime} - {evt.endTime}
                                     </span>
                                     {evt.isPrivate && (
-                                      <Lock size={11} className="text-amber-400" title="Evento Riservato" />
+                                      <Lock size={10} className="text-amber-400 shrink-0" title="Impegno Riservato" />
                                     )}
                                   </div>
                                   <div className="font-semibold text-neutral-100 truncate mt-0.5">
-                                    {evt.isPrivate ? '🔒 Impegno Riservato' : evt.title}
+                                    {evt.title}
                                   </div>
                                   {evt.location && (
                                     <div className="text-[10px] text-neutral-400 truncate flex items-center gap-1 mt-0.5">
@@ -1083,7 +1302,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                               title={evt.title}
                             >
                               <span>{evt.startTime} </span>
-                              <span>{evt.isPrivate ? '🔒 Riservato' : evt.title}</span>
+                              <span>{evt.title}</span>
                             </div>
                           );
                         })}
@@ -1147,7 +1366,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                         {hourEvents.length === 0 ? (
                           <div className="text-xs text-neutral-600 group-hover:text-neutral-400 transition-colors py-1 flex items-center gap-1">
                             <Plus size={12} className="opacity-0 group-hover:opacity-100" />
-                            <span>Orario libero · Clicca per pianificare</span>
+                            <span>Orario libero</span>
                           </div>
                         ) : (
                           hourEvents.map((evt) => {
@@ -1176,10 +1395,8 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                                       </span>
                                     )}
                                   </div>
-                                  <h4 className="text-sm font-bold text-white">
-                                    {evt.isPrivate ? '🔒 Impegno Riservato' : evt.title}
-                                  </h4>
-                                  {evt.description && !evt.isPrivate && (
+                                  <h4 className="text-sm font-bold text-white">{evt.title}</h4>
+                                  {evt.description && (
                                     <p className="text-xs text-neutral-400 max-w-xl">
                                       {evt.description}
                                     </p>
@@ -1234,7 +1451,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                 <div>
                   <h3 className="text-base font-bold text-white">Elenco Cronologico Impegni</h3>
                   <p className="text-xs text-neutral-400">
-                    Tutti gli appuntamenti, le riunioni e i blocchi focus ordinati nel tempo
+                    Tutti gli appuntamenti, le riunioni e i momenti personali ordinati nel tempo
                   </p>
                 </div>
                 <button
@@ -1286,10 +1503,8 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                                 </span>
                               )}
                             </div>
-                            <h4 className="text-sm font-bold text-white">
-                              {evt.isPrivate ? '🔒 Impegno Riservato' : evt.title}
-                            </h4>
-                            {evt.description && !evt.isPrivate && (
+                            <h4 className="text-sm font-bold text-white">{evt.title}</h4>
+                            {evt.description && (
                               <p className="text-xs text-neutral-400 line-clamp-1 max-w-xl">
                                 {evt.description}
                               </p>
@@ -1370,7 +1585,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cerca impegni, clienti, note, luoghi..."
+                placeholder="Cerca impegni personali, famiglia, clienti, luoghi..."
                 className="flex-1 bg-transparent border-0 text-white text-sm outline-none placeholder:text-neutral-500"
               />
               <button
@@ -1381,11 +1596,10 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
               </button>
             </div>
 
-            {/* Quick Results List */}
             <div className="max-h-[360px] overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
               {searchQuery.trim() === '' ? (
                 <div className="p-4 text-center text-xs text-neutral-500">
-                  Digita per cercare tra tutti gli impegni e le prenotazioni clienti...
+                  Digita per cercare tra tutti gli impegni personali, compiti e appuntamenti...
                 </div>
               ) : searchResults.length === 0 ? (
                 <div className="p-6 text-center text-xs text-neutral-500">
@@ -1413,11 +1627,11 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                           </span>
                         </div>
                         <div className="font-bold text-sm text-white truncate">
-                          {evt.isPrivate ? '🔒 Impegno Riservato' : evt.title}
+                          {evt.title}
                         </div>
-                        {evt.clientName && (
+                        {evt.location && (
                           <div className="text-[11px] text-neutral-400 truncate">
-                            Cliente: {evt.clientName}
+                            {evt.location}
                           </div>
                         )}
                       </div>
@@ -1454,7 +1668,6 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
             </div>
 
             <div className="space-y-4 text-xs">
-              {/* Buffer Time */}
               <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="font-bold text-white flex items-center gap-1.5">
@@ -1466,7 +1679,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                   </span>
                 </div>
                 <p className="text-neutral-400 text-[11px]">
-                  Aggiunge automaticamente un intervallo di pausa prima e dopo ogni consulenza per redigere i verbali, archiviare i documenti o riposare.
+                  Aggiunge automaticamente un intervallo di pausa prima e dopo ogni appuntamento per redigere appunti o riposare.
                 </p>
                 <div className="grid grid-cols-4 gap-2 pt-1">
                   {[0, 10, 15, 30].map((mins) => (
@@ -1485,7 +1698,6 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                 </div>
               </div>
 
-              {/* Working Hours */}
               <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 space-y-2">
                 <div className="font-bold text-white flex items-center gap-1.5">
                   <Clock size={14} className="text-blue-400" />
@@ -1493,7 +1705,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div>
-                    <label className="text-neutral-400 text-[10px] block mb-1">Inizio Lavoro</label>
+                    <label className="text-neutral-400 text-[10px] block mb-1">Inizio</label>
                     <input
                       type="time"
                       value={availabilityRules.startHour}
@@ -1502,7 +1714,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="text-neutral-400 text-[10px] block mb-1">Fine Lavoro</label>
+                    <label className="text-neutral-400 text-[10px] block mb-1">Fine</label>
                     <input
                       type="time"
                       value={availabilityRules.endHour}
@@ -1512,29 +1724,6 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                   </div>
                 </div>
               </div>
-
-              {/* Max daily appointments */}
-              <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 flex items-center justify-between">
-                <div>
-                  <div className="font-bold text-white">Massimo Appuntamenti al Giorno</div>
-                  <div className="text-[11px] text-neutral-400">Blocca nuove prenotazioni una volta raggiunto il limite</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setAvailabilityRules((r) => ({ ...r, maxDailyBookings: Math.max(1, r.maxDailyBookings - 1) }))}
-                    className="w-7 h-7 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center font-bold"
-                  >
-                    -
-                  </button>
-                  <span className="font-mono font-bold text-sm w-6 text-center">{availabilityRules.maxDailyBookings}</span>
-                  <button
-                    onClick={() => setAvailabilityRules((r) => ({ ...r, maxDailyBookings: r.maxDailyBookings + 1 }))}
-                    className="w-7 h-7 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center font-bold"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
             </div>
 
             <div className="pt-2 flex justify-end">
@@ -1542,7 +1731,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                 onClick={() => setShowRulesModal(false)}
                 className="px-5 py-2 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-colors shadow-md"
               >
-                Applica Regole
+                Salva Regole
               </button>
             </div>
           </div>
@@ -1581,7 +1770,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                   required
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="es. Riunione Direzione, Visita Medica, Analisi Polizza..."
+                  placeholder="es. Gita Monte Brè, Visita Pediatra, Allenamento Cornaredo, Bolletta..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-white text-white text-xs outline-none transition-colors"
                 />
               </div>
@@ -1642,25 +1831,60 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                 </div>
               </div>
 
+              {/* Family Member Association */}
+              <div>
+                <label className="block text-neutral-300 font-semibold mb-1">
+                  Chi riguarda questo impegno? (Famiglia & Casa)
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormFamilyMemberId('')}
+                    className={`p-2 rounded-xl border text-center transition-all text-xs ${
+                      !formFamilyMemberId
+                        ? 'border-white bg-neutral-900 text-white font-bold'
+                        : 'border-neutral-800 bg-neutral-950 text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    Tutti
+                  </button>
+                  {FAMILY_MEMBERS.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setFormFamilyMemberId(m.id)}
+                      className={`p-2 rounded-xl border text-center transition-all text-xs flex items-center justify-center gap-1.5 ${
+                        formFamilyMemberId === m.id
+                          ? 'border-white bg-neutral-900 text-white font-bold'
+                          : 'border-neutral-800 bg-neutral-950 text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }}></span>
+                      <span>{m.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Location or Video Link */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-neutral-300 font-semibold mb-1">Luogo / Sede</label>
+                  <label className="block text-neutral-300 font-semibold mb-1">Luogo / Indirizzo</label>
                   <input
                     type="text"
                     value={formLocation}
                     onChange={(e) => setFormLocation(e.target.value)}
-                    placeholder="es. Sede Bioggio, Domicilio Lugano..."
+                    placeholder="es. Lugano, Campo Cornaredo, Clinica Moncucco..."
                     className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-white text-white text-xs outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-neutral-300 font-semibold mb-1">Link Videoconferenza (opz.)</label>
+                  <label className="block text-neutral-300 font-semibold mb-1">Link o Contatto (opz.)</label>
                   <input
                     type="text"
                     value={formMeetUrl}
                     onChange={(e) => setFormMeetUrl(e.target.value)}
-                    placeholder="https://meet.calendario.ch/..."
+                    placeholder="https://... o tel"
                     className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-white text-white text-xs outline-none font-mono"
                   />
                 </div>
@@ -1679,10 +1903,10 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                   <div>
                     <label htmlFor="chk-private" className="font-bold text-white cursor-pointer flex items-center gap-1.5">
                       <Lock size={12} className="text-amber-400" />
-                      <span>Impegno Riservato (Privato)</span>
+                      <span>Impegno Privato & Riservato</span>
                     </label>
                     <p className="text-[11px] text-neutral-400">
-                      I dettagli, note e titolo non saranno visibili a collaboratori o nell'esportazione pubblica.
+                      I dettagli restano solo a te. Nessuno vedrà note o titolo.
                     </p>
                   </div>
                 </div>
@@ -1698,10 +1922,10 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                   <div>
                     <label htmlFor="chk-blocks" className="font-bold text-white cursor-pointer flex items-center gap-1.5">
                       <ShieldCheck size={12} className="text-emerald-400" />
-                      <span>Blocca disponibilità sul calendario pubblico</span>
+                      <span>Proteggi questo orario da appuntamenti di lavoro</span>
                     </label>
                     <p className="text-[11px] text-neutral-400">
-                      Rende questo slot orario NON prenotabile sul tuo link <code className="text-neutral-300">calendario.ch/{profile.handle}</code>.
+                      Rende questo slot orario "Occupato" sul link pubblico di prenotazione.
                     </p>
                   </div>
                 </div>
@@ -1710,13 +1934,13 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
               {/* Description */}
               <div>
                 <label className="block text-neutral-300 font-semibold mb-1">
-                  Note & Descrizione (Riservate)
+                  Note & Promemoria
                 </label>
                 <textarea
                   rows={2}
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Dettagli aggiuntivi, promemoria pratiche..."
+                  placeholder="Dettagli aggiuntivi, cose da portare..."
                   className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-white text-white text-xs outline-none custom-scrollbar"
                 ></textarea>
               </div>
@@ -1760,7 +1984,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
         </div>
       )}
 
-      {/* MODAL: DETTAGLI EVENTO, NOTE & CHECKLIST */}
+      {/* MODAL: DETTAGLI EVENTO */}
       {showDetailModal && selectedEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-lg rounded-3xl border border-neutral-800 bg-[#0a0a0a] text-white p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto custom-scrollbar">
@@ -1784,7 +2008,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
 
             <div className="space-y-3">
               <h3 className="text-lg font-bold text-white leading-tight">
-                {selectedEvent.isPrivate ? '🔒 Impegno Riservato' : selectedEvent.title}
+                {selectedEvent.title}
               </h3>
 
               <div className="space-y-2 text-xs text-neutral-300 pt-1">
@@ -1825,67 +2049,42 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                   </div>
                 )}
 
-                {selectedEvent.description && !selectedEvent.isPrivate && (
-                  <p className="text-xs text-neutral-400 pt-1">
+                {selectedEvent.description && (
+                  <p className="text-xs text-neutral-400 pt-1 leading-relaxed">
                     {selectedEvent.description}
                   </p>
                 )}
 
-                {/* Interactive Checklist / Verbali */}
-                <div className="mt-4 pt-3 border-t border-neutral-900 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-white">
-                    <span className="flex items-center gap-1.5">
-                      <CheckSquare size={13} className="text-white" />
-                      <span>Checklist Attività & Documenti</span>
-                    </span>
-                    <span className="text-[10px] font-mono text-neutral-500">
-                      {(selectedEvent.checklist || []).filter((c) => c.done).length} / {(selectedEvent.checklist || []).length} completati
-                    </span>
-                  </div>
+                {/* Interactive Checklist */}
+                {(selectedEvent.checklist || []).length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-neutral-900 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-white">
+                      <span className="flex items-center gap-1.5">
+                        <CheckSquare size={13} className="text-white" />
+                        <span>Checklist Attività</span>
+                      </span>
+                    </div>
 
-                  <div className="space-y-1">
-                    {(selectedEvent.checklist || []).map((item, idx) => (
-                      <div
-                        key={item.id}
-                        onClick={() => toggleDetailChecklist(idx)}
-                        className="flex items-center gap-2 p-2 rounded-xl bg-neutral-950/70 border border-neutral-900 hover:border-neutral-800 transition-colors cursor-pointer text-xs"
-                      >
-                        {item.done ? (
-                          <CheckSquare size={14} className="text-emerald-400 shrink-0" />
-                        ) : (
-                          <Square size={14} className="text-neutral-500 shrink-0" />
-                        )}
-                        <span className={item.done ? 'line-through text-neutral-500' : 'text-neutral-200'}>
-                          {item.text}
-                        </span>
-                      </div>
-                    ))}
+                    <div className="space-y-1">
+                      {(selectedEvent.checklist || []).map((item, idx) => (
+                        <div
+                          key={item.id}
+                          onClick={() => toggleDetailChecklist(idx)}
+                          className="flex items-center gap-2 p-2 rounded-xl bg-neutral-950/70 border border-neutral-900 hover:border-neutral-800 transition-colors cursor-pointer text-xs"
+                        >
+                          {item.done ? (
+                            <CheckSquare size={14} className="text-emerald-400 shrink-0" />
+                          ) : (
+                            <Square size={14} className="text-neutral-500 shrink-0" />
+                          )}
+                          <span className={item.done ? 'line-through text-neutral-500' : 'text-neutral-200'}>
+                            {item.text}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-
-                  {/* Add checklist item inline */}
-                  <div className="flex items-center gap-2 pt-1">
-                    <input
-                      type="text"
-                      value={newCheckItemText}
-                      onChange={(e) => setNewCheckItemText(e.target.value)}
-                      placeholder="Aggiungi task (es. Inviare preventivo cassa malati)..."
-                      className="flex-1 px-3 py-1.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white outline-none"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addDetailChecklistItem(newCheckItemText);
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => addDetailChecklistItem(newCheckItemText)}
-                      className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-semibold"
-                    >
-                      Aggiungi
-                    </button>
-                  </div>
-                </div>
+                )}
 
                 <div className="pt-2 flex items-center gap-2">
                   {selectedEvent.isPrivate && (
@@ -2007,7 +2206,7 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
                   <span>Conformità nLPD & Sovranità dei Dati</span>
                 </div>
                 <p className="text-neutral-400 text-[11px]">
-                  A differenza di Google Calendar o Microsoft 365 con server esteri, i dati di <strong>calendario.ch</strong> risiedono su infrastruttura elvetica protetta a Zurigo con cifratura a riposo e in transito.
+                  I tuoi dati personali risiedono esclusivamente su server elvetici a Zurigo. Zero profilazione pubblicitaria, privacy totale garantita dalla legge svizzera.
                 </p>
               </div>
             </div>
@@ -2016,6 +2215,137 @@ export const PrivateCalendarView: React.FC<PrivateCalendarViewProps> = ({
               <button
                 onClick={() => setShowSyncModal(false)}
                 className="px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold transition-colors"
+              >
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CONDIVIDI CON FAMIGLIA & WEBCAL */}
+      {showFamilyShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl border border-neutral-800 bg-[#0a0a0a] text-white p-6 sm:p-7 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center font-bold shadow-md">
+                  <Users size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    Condivisione Calendario Famiglia
+                  </h3>
+                  <span className="text-[10px] font-mono text-neutral-400">
+                    Sincronizzazione cifrata e sovrana a Zurigo
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFamilyShareModal(false)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Condividi gli impegni di casa (scuola dei figli, orari sportivi, visite pediatriche, impegni di coppia) senza mai esporre i tuoi dati personali ad algoritmi pubblicitari. Funziona istantaneamente con l'app <strong className="text-white">Calendario Apple su iPhone e Mac</strong>.
+            </p>
+
+            {/* Current Family Members */}
+            <div className="space-y-2">
+              <span className="text-xs font-semibold text-neutral-300">
+                Membri della Famiglia ({FAMILY_MEMBERS.length}):
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {FAMILY_MEMBERS.map((m) => (
+                  <div key={m.id} className="p-2.5 rounded-xl border border-neutral-800 bg-neutral-950 flex items-center gap-2.5">
+                    <div 
+                      className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0" 
+                      style={{ backgroundColor: m.color, color: '#000000' }}
+                    >
+                      {m.initials}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-white truncate">{m.name}</div>
+                      <div className="text-[10px] text-neutral-400 truncate">{m.role.split('·')[0].trim()}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Invite Family Member */}
+            <div className="p-4 rounded-2xl border border-neutral-800 bg-neutral-950 space-y-3">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Mail size={13} className="text-cyan-400" />
+                <span>Invita partner o figlio (Email o Cellulare +41)</span>
+              </span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={familyInviteEmail}
+                  onChange={(e) => setFamilyInviteEmail(e.target.value)}
+                  placeholder="es. elena@famiglia.ch o +41 79 ..."
+                  className="flex-1 px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (familyInviteEmail.trim()) {
+                      setFamilyInviteSent(true);
+                      setTimeout(() => setFamilyInviteSent(false), 3000);
+                      setFamilyInviteEmail('');
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-all shrink-0"
+                >
+                  {familyInviteSent ? 'Inviato!' : 'Invia Invito'}
+                </button>
+              </div>
+              {familyInviteSent && (
+                <div className="text-[11px] text-emerald-400 flex items-center gap-1">
+                  <Check size={12} /> Invito famiglia inviato con successo!
+                </div>
+              )}
+            </div>
+
+            {/* Apple Calendar Webcal Link */}
+            <div className="p-4 rounded-2xl border border-neutral-800 bg-neutral-950 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Smartphone size={13} className="text-white" />
+                  <span>Abbonamento Webcal per iPhone & Apple Watch</span>
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Aggiornamento Automatico
+                </span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-neutral-900 font-mono text-[11px] text-neutral-300 break-all select-all flex items-center justify-between gap-2 border border-neutral-800">
+                <span>webcal://calendario.ch/family/bernasconi-99214.ics</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText('webcal://calendario.ch/family/bernasconi-99214.ics');
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  }}
+                  className="px-2.5 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-white text-[10px] shrink-0 font-sans"
+                >
+                  {copiedLink ? 'Copiato!' : 'Copia Link'}
+                </button>
+              </div>
+              <p className="text-[10px] text-neutral-400">
+                Su iOS: aprendo questo link Safari ti chiederà "Vuoi iscriverti a questo calendario?". Gli impegni di casa appariranno subito nell'app di sistema.
+              </p>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowFamilyShareModal(false)}
+                className="px-4 py-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-xs font-semibold"
               >
                 Chiudi
               </button>

@@ -2,7 +2,38 @@ export type ViewMode = 'landing' | 'booking' | 'dashboard' | 'calendar' | 'embed
 
 export type CalendarViewType = 'month' | 'week' | 'day' | 'agenda';
 
-export type EventCategory = 'client' | 'work' | 'personal' | 'focus' | 'travel';
+export type CalendarContextMode = 'personal' | 'work' | 'all';
+
+export type EventCategory = 
+  | 'family' 
+  | 'health' 
+  | 'home_finance' 
+  | 'leisure' 
+  | 'holiday' 
+  | 'personal' 
+  | 'client' 
+  | 'work' 
+  | 'focus' 
+  | 'travel';
+
+export interface SwissDeadline {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  canton?: string;
+  description: string;
+  badge: string;
+  category: 'tax' | 'health' | 'civic';
+}
+
+export interface DailyPersonalTask {
+  id: string;
+  title: string;
+  date: string;
+  completed: boolean;
+  priority?: 'low' | 'medium' | 'high';
+  category?: 'home' | 'finance' | 'family' | 'health';
+}
 
 export interface ChecklistItem {
   id: string;
@@ -36,7 +67,46 @@ export interface CalendarEvent {
   clientPhone?: string;
   checklist?: ChecklistItem[];
   notes?: string;
+  familyMemberId?: string; // 'me' | 'partner' | 'sofia' | 'leo'
+  canton?: string;
   createdAt?: string;
+}
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  role: string; // 'Io (Marco)' | 'Elena (Partner)' | 'Sofia (Figlia 12a)' | 'Leo (Figlio 8a)'
+  avatarBg: string;
+  color: string;
+  initials: string;
+}
+
+export interface CantonalSchoolHoliday {
+  id: string;
+  canton: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  season: 'autunno' | 'natale' | 'carnevale' | 'primavera' | 'estate';
+  description: string;
+}
+
+export interface WasteCollectionItem {
+  id: string;
+  type: 'carta' | 'verde' | 'vetro' | 'multisacco' | 'ingombranti';
+  title: string;
+  dayOfWeek: string;
+  nextDate: string;
+  badge: string;
+  iconName: string;
+}
+
+export interface SwissWeekendForecast {
+  location: string;
+  day: string;
+  condition: string;
+  temp: string;
+  tip: string;
 }
 
 export interface CalendarCategoryInfo {
@@ -46,6 +116,7 @@ export interface CalendarCategoryInfo {
   color: string;
   badgeBg: string;
   badgeBorder: string;
+  group: 'personal' | 'work' | 'civic';
 }
 
 export interface BookingService {

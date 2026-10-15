@@ -5,6 +5,7 @@ import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { BookingWidget } from './components/BookingWidget';
 import { BentoFeatures } from './components/BentoFeatures';
+import { LandingShowcase } from './components/LandingShowcase';
 import { DashboardView } from './components/DashboardView';
 import { PrivateCalendarView } from './components/PrivateCalendarView';
 import { EmbedModal } from './components/EmbedModal';
@@ -116,30 +117,12 @@ export default function App() {
               onOpenEmbedModal={() => setShowEmbedModal(true)}
             />
 
-            {/* Live Interactive Booking Showcase */}
-            <section className="py-16 md:py-24 border-b border-neutral-900 bg-neutral-950/40 relative">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                <div className="text-center max-w-xl mx-auto mb-12">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-neutral-800 bg-neutral-900 text-xs font-mono text-neutral-300 mb-3">
-                    <Sparkles size={12} className="text-white" />
-                    <span>ANTEPRIMA LIVE INTERATTIVA</span>
-                  </div>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                    Come appare a un cliente reale
-                  </h2>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    Ecco la pagina di prenotazione attiva per Pietro Pirola. Gli slot occupati nella sua agenda privata appaiono automaticamente non disponibili.
-                  </p>
-                </div>
-
-                {/* The Widget */}
-                <BookingWidget
-                  profile={PIETRO_PIROLA_PROFILE}
-                  blockedSlots={blockedSlots}
-                  onBookingCreated={handleBookingCreated}
-                />
-              </div>
-            </section>
+            {/* Interactive Showcase (Personal & Family Life First, Swiss Civic, Pro optional) */}
+            <LandingShowcase
+              onViewChange={setViewMode}
+              blockedSlots={blockedSlots}
+              onBookingCreated={handleBookingCreated}
+            />
 
             {/* Bento Grid Features */}
             <BentoFeatures />
