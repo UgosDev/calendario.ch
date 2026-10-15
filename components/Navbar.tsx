@@ -1,6 +1,6 @@
 import React from 'react';
 import { ViewMode } from '../types';
-import { Calendar, LayoutDashboard, Share2, ShieldCheck, ArrowRight, ExternalLink } from 'lucide-react';
+import { Calendar, LayoutDashboard, Share2, ShieldCheck, ArrowRight, ExternalLink, Lock } from 'lucide-react';
 
 interface NavbarProps {
   viewMode: ViewMode;
@@ -41,6 +41,18 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* View Switchers & Navigation */}
         <nav className="flex items-center gap-2 sm:gap-3">
           <button
+            onClick={() => onViewChange('calendar')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+              viewMode === 'calendar'
+                ? 'bg-white text-black font-bold shadow-sm'
+                : 'text-neutral-300 hover:text-white hover:bg-neutral-900/60 border border-neutral-800'
+            }`}
+          >
+            <Lock size={12} className={viewMode === 'calendar' ? 'text-black' : 'text-amber-400'} />
+            <span>Mio Calendario</span>
+          </button>
+
+          <button
             onClick={() => onViewChange('booking')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               viewMode === 'booking'
@@ -48,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 : 'text-neutral-400 hover:text-white hover:bg-neutral-900/60'
             }`}
           >
-            <span>Vetrina Pietro Pirola</span>
+            <span>Vetrina Pubblica</span>
           </button>
 
           <button

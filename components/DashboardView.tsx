@@ -27,6 +27,7 @@ interface DashboardViewProps {
   bookings: BookingRequest[];
   onOpenBooking: () => void;
   onOpenEmbedModal: () => void;
+  onOpenCalendar?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -34,6 +35,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   bookings,
   onOpenBooking,
   onOpenEmbedModal,
+  onOpenCalendar,
 }) => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [activeTab, setActiveTab] = useState<'bookings' | 'services' | 'availability' | 'integrations'>('bookings');
@@ -86,9 +88,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Quick Actions */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {onOpenCalendar && (
+            <button
+              onClick={onOpenCalendar}
+              className="px-4 py-2 rounded-xl bg-white text-black hover:bg-neutral-200 font-bold text-xs transition-all shadow-md flex items-center gap-1.5 active:scale-95"
+            >
+              <CalendarIcon size={13} />
+              <span>Agenda Privata</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenBooking}
-            className="px-4 py-2 rounded-xl bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition-all shadow-md flex items-center gap-1.5 active:scale-95"
+            className="px-4 py-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-200 hover:text-white font-semibold text-xs transition-all flex items-center gap-1.5 active:scale-95"
           >
             <span>Vedi Pagina Pubblica</span>
             <ArrowUpRight size={13} />

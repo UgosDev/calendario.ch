@@ -26,12 +26,14 @@ interface BookingWidgetProps {
   profile: ProfessionalProfile;
   isEmbed?: boolean;
   onBookingCreated?: (booking: BookingRequest) => void;
+  blockedSlots?: Array<{ date: string; time: string }>;
 }
 
 export const BookingWidget: React.FC<BookingWidgetProps> = ({
   profile,
   isEmbed = false,
   onBookingCreated,
+  blockedSlots = [],
 }) => {
   const [selectedService, setSelectedService] = useState<BookingService>(profile.services[0]);
   
@@ -345,17 +347,29 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({
                   <div className="grid grid-cols-2 gap-2 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
                     {AVAILABLE_SLOTS.map((slot) => {
                       const isSelected = selectedSlot === slot;
+                      const isBlocked = blockedSlots.some(
+                        (b) => b.date === selectedDate && b.time === slot
+                      );
+
                       return (
                         <button
                           key={slot}
-                          onClick={() => setSelectedSlot(slot)}
-                          className={`py-2 px-3 rounded-xl border text-xs font-mono font-medium transition-all ${
-                            isSelected
+                          disabled={isBlocked}
+                          onClick={() => !isBlocked && setSelectedSlot(slot)}
+                          className={`py-2 px-3 rounded-xl border text-xs font-mono font-medium transition-all flex items-center justify-between ${
+                            isBlocked
+                              ? 'border-neutral-900 bg-neutral-950/80 text-neutral-600 cursor-not-allowed line-through'
+                              : isSelected
                               ? 'border-white bg-white text-black shadow-md'
                               : 'border-neutral-800/80 bg-neutral-900/40 text-neutral-300 hover:border-neutral-700 hover:bg-neutral-800'
                           }`}
                         >
-                          {slot}
+                          <span>{slot}</span>
+                          {isBlocked && (
+                            <span className="text-[9px] font-sans no-underline font-normal text-neutral-500">
+                              Occupato
+                            </span>
+                          )}
                         </button>
                       );
                     })}

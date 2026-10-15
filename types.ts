@@ -1,4 +1,36 @@
-export type ViewMode = 'landing' | 'booking' | 'dashboard' | 'embed';
+export type ViewMode = 'landing' | 'booking' | 'dashboard' | 'calendar' | 'embed';
+
+export type CalendarViewType = 'month' | 'week' | 'day' | 'agenda';
+
+export type EventCategory = 'client' | 'work' | 'personal' | 'focus' | 'travel';
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  date: string; // YYYY-MM-DD
+  startTime: string; // "10:00"
+  endTime: string; // "11:30"
+  category: EventCategory;
+  location?: string;
+  meetUrl?: string;
+  isPrivate: boolean; // Hidden from details when exported or viewed by guests
+  blocksBooking: boolean; // Disables slot on public booking widget
+  bookingId?: string; // Reference to client booking if applicable
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  createdAt?: string;
+}
+
+export interface CalendarCategoryInfo {
+  id: EventCategory;
+  label: string;
+  description: string;
+  color: string;
+  badgeBg: string;
+  badgeBorder: string;
+}
 
 export interface BookingService {
   id: string;

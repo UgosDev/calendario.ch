@@ -1,20 +1,22 @@
-import React, { useState } from 'react';
-import { ViewMode, BookingRequest } from './types';
-import { PIETRO_PIROLA_PROFILE, INITIAL_BOOKINGS } from './mockData';
+import React, { useState, useMemo } from 'react';
+import { ViewMode, BookingRequest, CalendarEvent } from './types';
+import { PIETRO_PIROLA_PROFILE, INITIAL_BOOKINGS, INITIAL_EVENTS } from './mockData';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { BookingWidget } from './components/BookingWidget';
 import { BentoFeatures } from './components/BentoFeatures';
 import { DashboardView } from './components/DashboardView';
+import { PrivateCalendarView } from './components/PrivateCalendarView';
 import { EmbedModal } from './components/EmbedModal';
 import { Footer } from './components/Footer';
-import { ArrowLeft, Share2, ShieldCheck, Sparkles, Building, Phone } from 'lucide-react';
+import { ArrowLeft, Share2, ShieldCheck, Sparkles, Lock, Calendar as CalendarIcon } from 'lucide-react';
 
 export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     // Check URL parameters or pathname for embed mode and views
     const path = window.location.pathname.toLowerCase();
     const params = new URLSearchParams(window.location.search);
+    if (path.includes('/calendar') || params.get('view') === 'calendar') return 'calendar';
     if (path.includes('/embed') || params.get('embed') === 'true') return 'embed';
     if (path.includes('/dashboard') || params.get('view') === 'dashboard') return 'dashboard';
     if (path.length > 1 && !path.endsWith('index.html') || params.get('view') === 'booking') return 'booking';
@@ -22,10 +24,63 @@ export default function App() {
   });
 
   const [bookings, setBookings] = useState<BookingRequest[]>(INITIAL_BOOKINGS);
+  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
   const [showEmbedModal, setShowEmbedModal] = useState(false);
+
+  // Derive blocked slots from private & confirmed events that have blocksBooking = true
+  const blockedSlots = useMemo(() => {
+    return events
+      .filter((e) => e.blocksBooking)
+      .map((e) => ({ date: e.date, time: e.startTime }));
+  }, [events]);
 
   const handleBookingCreated = (newBooking: BookingRequest) => {
     setBookings((prev) => [newBooking, ...prev]);
+
+    // Automatically create a client event in the private calendar
+    const [h, m] = newBooking.timeSlot.split(':').map(Number);
+    const duration = newBooking.durationMinutes || 45;
+    const endMinutes = h * 60 + m + duration;
+    const endH = String(Math.floor(endMinutes / 60)).padStart(2, '0');
+    const endM = String(endMinutes % 60).padStart(2, '0');
+
+    const clientEvent: CalendarEvent = {
+      id: `evt-${newBooking.id}`,
+      title: `${newBooking.serviceName} · ${newBooking.clientName}`,
+      description: newBooking.clientNotes || `Prenotazione online per ${newBooking.clientName}`,
+      date: newBooking.date,
+      startTime: newBooking.timeSlot,
+      endTime: `${endH}:${endM}`,
+      category: 'client',
+      location:
+        newBooking.meetingLocation === 'office'
+          ? 'Sede MT Financial Bioggio (Via Lugano 1A)'
+          : newBooking.meetingLocation === 'video'
+          ? 'Videoconferenza protetta'
+          : 'A Domicilio Cliente',
+      meetUrl: newBooking.meetingLocation === 'video' ? `https://meet.calendario.ch/${newBooking.id}` : undefined,
+      isPrivate: false,
+      blocksBooking: true,
+      bookingId: newBooking.id,
+      clientName: newBooking.clientName,
+      clientEmail: newBooking.clientEmail,
+      clientPhone: newBooking.clientPhone,
+      createdAt: newBooking.createdAt,
+    };
+
+    setEvents((prev) => [clientEvent, ...prev]);
+  };
+
+  const handleAddEvent = (newEvent: CalendarEvent) => {
+    setEvents((prev) => [newEvent, ...prev]);
+  };
+
+  const handleUpdateEvent = (updated: CalendarEvent) => {
+    setEvents((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+  };
+
+  const handleDeleteEvent = (id: string) => {
+    setEvents((prev) => prev.filter((e) => e.id !== id));
   };
 
   // Embed Mode (pure widget for iframe in pagine.ch)
@@ -35,6 +90,7 @@ export default function App() {
         <BookingWidget
           profile={PIETRO_PIROLA_PROFILE}
           isEmbed={true}
+          blockedSlots={blockedSlots}
           onBookingCreated={handleBookingCreated}
         />
       </div>
@@ -72,13 +128,14 @@ export default function App() {
                     Come appare a un cliente reale
                   </h2>
                   <p className="text-xs text-neutral-400 mt-1">
-                    Ecco la pagina di prenotazione attiva per Pietro Pirola (Capo Struttura presso MT Financial Consulting Sagl).
+                    Ecco la pagina di prenotazione attiva per Pietro Pirola. Gli slot occupati nella sua agenda privata appaiono automaticamente non disponibili.
                   </p>
                 </div>
 
                 {/* The Widget */}
                 <BookingWidget
                   profile={PIETRO_PIROLA_PROFILE}
+                  blockedSlots={blockedSlots}
                   onBookingCreated={handleBookingCreated}
                 />
               </div>
@@ -89,7 +146,21 @@ export default function App() {
           </>
         )}
 
-        {/* Dedicated Booking Page (pietro-pirola) */}
+        {/* Private Calendar View (Full personal scheduling app) */}
+        {viewMode === 'calendar' && (
+          <PrivateCalendarView
+            profile={PIETRO_PIROLA_PROFILE}
+            events={events}
+            bookings={bookings}
+            onAddEvent={handleAddEvent}
+            onUpdateEvent={handleUpdateEvent}
+            onDeleteEvent={handleDeleteEvent}
+            onOpenPublicBooking={() => setViewMode('booking')}
+            onOpenEmbedModal={() => setShowEmbedModal(true)}
+          />
+        )}
+
+        {/* Dedicated Public Booking Page (pietro-pirola) */}
         {viewMode === 'booking' && (
           <div className="py-12 md:py-16 max-w-7xl mx-auto px-4 sm:px-6">
             <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between">
@@ -101,17 +172,27 @@ export default function App() {
                 <span>Torna alla panoramica</span>
               </button>
 
-              <button
-                onClick={() => setShowEmbedModal(true)}
-                className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 transition-colors"
-              >
-                <Share2 size={13} />
-                <span>Incorpora questo calendario</span>
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setViewMode('calendar')}
+                  className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 transition-colors font-medium"
+                >
+                  <Lock size={12} className="text-amber-400" />
+                  <span>Apri la tua Agenda Privata</span>
+                </button>
+                <button
+                  onClick={() => setShowEmbedModal(true)}
+                  className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 transition-colors"
+                >
+                  <Share2 size={13} />
+                  <span>Incorpora questo calendario</span>
+                </button>
+              </div>
             </div>
 
             <BookingWidget
               profile={PIETRO_PIROLA_PROFILE}
+              blockedSlots={blockedSlots}
               onBookingCreated={handleBookingCreated}
             />
 
@@ -132,6 +213,7 @@ export default function App() {
             bookings={bookings}
             onOpenBooking={() => setViewMode('booking')}
             onOpenEmbedModal={() => setShowEmbedModal(true)}
+            onOpenCalendar={() => setViewMode('calendar')}
           />
         )}
       </main>

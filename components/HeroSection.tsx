@@ -41,18 +41,26 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-16">
           <button
-            onClick={() => onViewChange('booking')}
-            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white text-black hover:bg-neutral-200 font-semibold text-sm transition-all shadow-[0_0_25px_rgba(255,255,255,0.2)] flex items-center justify-center gap-2 active:scale-95"
+            onClick={() => onViewChange('calendar')}
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white text-black hover:bg-neutral-200 font-bold text-sm transition-all shadow-[0_0_25px_rgba(255,255,255,0.2)] flex items-center justify-center gap-2 active:scale-95"
           >
-            <span>Prova Prenotazione (Pietro Pirola)</span>
+            <Lock size={15} />
+            <span>Apri Agenda Privata</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('booking')}
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-200 hover:text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 active:scale-95"
+          >
+            <span>Vetrina Pubblica (Pietro Pirola)</span>
             <ArrowRight size={15} />
           </button>
 
           <button
             onClick={() => onViewChange('dashboard')}
-            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-200 hover:text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 active:scale-95"
+            className="w-full sm:w-auto px-5 py-3.5 rounded-xl text-neutral-400 hover:text-white text-xs font-mono transition-colors flex items-center justify-center gap-1.5"
           >
-            <span>Pannello del Professionista</span>
+            <span>Dashboard</span>
           </button>
 
           <button
