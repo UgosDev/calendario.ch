@@ -1,104 +1,168 @@
-import React from 'react';
-import { ViewMode } from '../types';
-import { Calendar, LayoutDashboard, Share2, ShieldCheck, ArrowRight, ExternalLink, Lock } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { ViewMode, UssoUser, VaultSyncStatus } from '../types';
+import { getDisplayName, getInitials } from '../services/ussoAuth';
+import { Sparkles, Search, Plus, ShieldCheck, Database, Snowflake } from 'lucide-react';
 
-interface NavbarProps {
-  viewMode: ViewMode;
-  onViewChange: (mode: ViewMode) => void;
-  onOpenEmbedModal: () => void;
+interface Props {
+  currentView: ViewMode;
+  onSelectView: (v: ViewMode) => void;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
+  onOpenNewEvent: () => void;
+  onOpenAccountModal: () => void;
+  user: UssoUser | null;
+  syncStatus: VaultSyncStatus;
+  snowEnabled: boolean;
+  onToggleSnow: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({
-  viewMode,
-  onViewChange,
-  onOpenEmbedModal,
+export const Navbar: React.FC<Props> = ({
+  currentView,
+  onSelectView,
+  searchQuery,
+  onSearchChange,
+  onOpenNewEvent,
+  onOpenAccountModal,
+  user,
+  syncStatus,
+  snowEnabled,
+  onToggleSnow
 }) => {
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === '/' &&
+        !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const views: { mode: ViewMode; label: string }[] = [
+    { mode: 'month', label: 'Mese' },
+    { mode: 'week', label: 'Settimana' },
+    { mode: 'day', label: 'Giorno' },
+    { mode: 'agenda', label: 'Agenda' },
+    { mode: 'slots', label: 'Slot condivisi' },
+    { mode: 'embed', label: 'Incorpora' }
+  ];
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-neutral-900/80 bg-black/80 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        {/* Brand */}
-        <div className="flex items-center gap-6">
-          <button 
-            onClick={() => onViewChange('landing')}
-            className="flex items-center gap-2.5 group text-left"
-          >
-            <div className="w-8 h-8 rounded-lg bg-white text-black flex items-center justify-center font-bold shadow-[0_0_15px_rgba(255,255,255,0.2)] transition-transform group-hover:scale-105">
-              <Calendar size={18} strokeWidth={2.5} />
-            </div>
-            <div>
-              <span className="font-bold text-base tracking-tight text-white">
-                calendario<span className="text-neutral-500 font-normal">.ch</span>
-              </span>
-              <span className="hidden sm:block text-[10px] font-mono text-neutral-400 -mt-0.5">
-                L’Agenda della Svizzera
-              </span>
-            </div>
-          </button>
+    <header className="top">
+      {/* Logo Sovrano */}
+      <a
+        href="#"
+        onClick={(e) => {
+          e.preventDefault();
+          onSelectView('week');
+        }}
+        className="logo"
+        aria-label="calendario.ch, torna al calendario"
+      >
+        <span>calendario.ch</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#b08a3e"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 3l2.2 6.8H21l-5.5 4 2.1 6.7L12 16.4l-5.6 4.1 2.1-6.7L3 9.8h6.8z" />
+        </svg>
+      </a>
 
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-neutral-800 bg-neutral-950 text-[11px] font-mono text-neutral-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Server Svizzera (Zurigo) · nLPD</span>
-          </div>
-        </div>
-
-        {/* View Switchers & Navigation */}
-        <nav className="flex items-center gap-2 sm:gap-3">
+      {/* Tabs Viste */}
+      <nav className="views" aria-label="Viste Principali">
+        {views.map((v) => (
           <button
-            onClick={() => onViewChange('calendar')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-              viewMode === 'calendar'
-                ? 'bg-white text-black font-bold shadow-sm'
-                : 'text-neutral-300 hover:text-white hover:bg-neutral-900/60 border border-neutral-800'
-            }`}
+            key={v.mode}
+            onClick={() => onSelectView(v.mode)}
+            aria-current={currentView === v.mode ? 'page' : undefined}
           >
-            <Calendar size={13} className={viewMode === 'calendar' ? 'text-black' : 'text-white'} />
-            <span>Mia Agenda</span>
+            {v.label}
           </button>
+        ))}
+      </nav>
 
-          <button
-            onClick={() => onViewChange('booking')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-              viewMode === 'booking'
-                ? 'bg-neutral-900 text-white border border-neutral-700 shadow-sm'
-                : 'text-neutral-400 hover:text-white hover:bg-neutral-900/60'
-            }`}
-          >
-            <span className="hidden sm:inline text-neutral-500 font-mono text-[10px]">PRO</span>
-            <span>Vetrina Booking</span>
-          </button>
-
-          <button
-            onClick={() => onViewChange('dashboard')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-              viewMode === 'dashboard'
-                ? 'bg-neutral-900 text-white border border-neutral-700 shadow-sm'
-                : 'text-neutral-400 hover:text-white hover:bg-neutral-900/60'
-            }`}
-          >
-            <LayoutDashboard size={13} />
-            <span className="hidden sm:inline">Dashboard Pro</span>
-          </button>
-
-          <button
-            onClick={onOpenEmbedModal}
-            className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:text-white hover:bg-neutral-900/60 border border-neutral-900 hover:border-neutral-800 transition-all"
-            title="Genera codice embed per pagine.ch"
-          >
-            <Share2 size={13} />
-            <span>Embed pagine.ch</span>
-          </button>
-
-          <a
-            href="https://pagine.ch"
-            target="_blank"
-            rel="noreferrer"
-            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-black hover:bg-neutral-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center gap-1 active:scale-95"
-          >
-            <span>Torna a pagine.ch</span>
-            <ArrowRight size={12} />
-          </a>
-        </nav>
+      {/* Ricerca Rapida con shortcut / */}
+      <div className="search" role="search">
+        <Search size={16} />
+        <label className="sr" htmlFor="global-search">
+          Cerca impegni e prenotazioni
+        </label>
+        <input
+          id="global-search"
+          ref={searchInputRef}
+          type="search"
+          placeholder="Cerca (/)"
+          autoComplete="off"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
       </div>
+
+      {/* Tasto Neve Stagionale */}
+      <button
+        type="button"
+        onClick={onToggleSnow}
+        className={`icon-btn ${snowEnabled ? 'text-[#b08a3e] border-[#b08a3e]' : 'text-[#868b82]'}`}
+        title={snowEnabled ? 'Disattiva animazione neve' : 'Attiva animazione neve'}
+        aria-label="Attiva/Disattiva Neve"
+      >
+        <Snowflake size={17} />
+      </button>
+
+      {/* Badge Caveau Archivio.ch */}
+      <button
+        type="button"
+        onClick={onOpenAccountModal}
+        className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#163a2a] bg-[#f4efe4] text-xs font-semibold text-[#163a2a] hover:bg-[#e9e2d3]"
+        title="Stato sincronizzazione Caveau Archivio.ch (Ginevra dc4-a)"
+      >
+        <Database size={13} className="text-[#163a2a]" />
+        <span>Vault dc4-a</span>
+        <span
+          className={`w-2 h-2 rounded-full ${
+            syncStatus.state === 'synced'
+              ? 'bg-emerald-600'
+              : syncStatus.state === 'syncing'
+              ? 'bg-amber-500 animate-pulse'
+              : 'bg-neutral-400'
+          }`}
+        />
+      </button>
+
+      {/* Pill Account USSO */}
+      <button
+        type="button"
+        onClick={onOpenAccountModal}
+        className="inline-flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-[#163a2a] bg-[#fbf8f1] hover:bg-[#f4efe4] text-xs font-bold text-[#163a2a]"
+        aria-label="Gestisci profilo USSO e impostazioni"
+      >
+        <span className="w-6 h-6 rounded-full bg-[#163a2a] text-white flex items-center justify-center text-[10px]">
+          {getInitials(user)}
+        </span>
+        <span className="max-w-[110px] truncate">{getDisplayName(user)}</span>
+        <ShieldCheck size={14} className="text-[#b08a3e]" />
+      </button>
+
+      {/* Bottone Nuovo */}
+      <button
+        type="button"
+        onClick={onOpenNewEvent}
+        className="btn dark btn-new"
+      >
+        <Plus size={16} /> Nuovo
+      </button>
     </header>
   );
 };

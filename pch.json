@@ -1,0 +1,7 @@
+{
+  "projectId": "calendario",
+  "name": "calendario.ch Sovereign Scheduling App",
+  "framework": "static",
+  "outputDir": "dist",
+  "buildCommand": "npm run build"
+}

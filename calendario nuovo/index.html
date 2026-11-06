@@ -1,0 +1,1737 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>calendario.ch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#163a2a; --muted:#4f5a52; --accent:#b3202a; --cream:#fbf8f1; --paper:#f4efe4;
+  --line:#e4dccb; --grid:#ece5d6; --weekend:#f6f1e6; --gold:#b08a3e; --off:#868b82;
+  --dis-bg:#e9e2d3; --dis:#5f665f; --hh:56px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--cream);color:var(--ink)}
+body{font-family:'Inter Tight',system-ui,sans-serif;font-size:14px;line-height:20px;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--ink)}a:hover{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none !important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* neve e oro */
+@keyframes cadere0{from{transform:translate3d(0,0,0)}to{transform:translate3d(36px,112vh,0)}}
+@keyframes cadere1{from{transform:translate3d(0,0,0)}to{transform:translate3d(-28px,112vh,0)}}
+@keyframes cadere2{from{transform:translate3d(0,0,0)}to{transform:translate3d(12px,112vh,0)}}
+@keyframes oscilla{from{transform:translateX(-9px)}to{transform:translateX(9px)}}
+@keyframes luccichio{0%{background-position:160% 0}100%{background-position:-60% 0}}
+.neve{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.fiocco{position:absolute;top:-16px}
+.fiocco i{display:block;border-radius:999px;background:radial-gradient(circle,#fff 0 42%,rgba(255,255,255,.9) 58%,rgba(255,255,255,0) 72%);box-shadow:0 0 5px rgba(22,58,42,.22)}
+.oro{background:linear-gradient(105deg,#8a6a22 0%,#b08a3e 35%,#f3e2a6 48%,#d9b865 56%,#8a6a22 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent !important;animation:luccichio 7s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.neve{display:none}.oro{animation:none;background-position:40% 0}}
+body.no-snow .neve{display:none}
+
+/* struttura */
+#app,#pub{position:relative;z-index:1}
+.top{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:12px 28px;min-height:64px;padding:0 40px;background:var(--cream);border-bottom:1.5px solid var(--gold)}
+.logo{font-size:17px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink);white-space:nowrap}
+.logo svg{flex:none}
+.views{display:flex;gap:24px;flex:1 1 auto}
+.views button{border:0;background:none;color:var(--muted);padding:21px 0 19px;border-bottom:2px solid transparent;margin-bottom:-1.5px}
+.views button[aria-current="page"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+.views button:hover{color:var(--ink)}
+.search{position:relative;display:flex;align-items:center}
+.search svg{position:absolute;left:12px;pointer-events:none;color:var(--muted)}
+.search input{height:40px;width:220px;border:1.5px solid var(--ink);border-radius:10px;padding:0 12px 0 36px;background:var(--cream)}
+.search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px #f6dcdd}
+.icon-btn{width:40px;height:40px;border:1.5px solid var(--ink);background:var(--cream);border-radius:10px;display:grid;place-items:center;color:var(--ink);flex:none}
+.round{width:44px;height:44px;border:1.5px solid var(--ink);background:var(--cream);border-radius:999px;display:grid;place-items:center;color:var(--ink);flex:none}
+.pill{height:44px;padding:0 16px;border:1.5px solid var(--ink);background:var(--cream);border-radius:999px;font-weight:600}
+.btn{height:42px;padding:0 18px;border:0;border-radius:10px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.red{background:var(--accent);color:#fff}
+.btn.line{border:1.5px solid var(--ink);background:var(--cream);color:var(--ink)}
+.btn.ghost{background:none;color:var(--accent);padding:0 8px}
+.btn.big{height:46px;border-radius:12px;padding:0 20px}
+.btn:disabled{background:var(--dis-bg);color:var(--dis);cursor:not-allowed;border:0}
+.btn.dark:hover{background:#0f2b1f}.btn.red:hover{background:#971a23}.btn.line:hover{background:var(--paper)}
+.body{display:flex;gap:32px;padding:28px 40px 40px;align-items:flex-start}
+aside.side{flex:0 0 264px;display:flex;flex-direction:column;gap:24px;position:sticky;top:92px}
+aside.side > *{background:var(--cream)}
+main.main{flex:1 1 auto;min-width:0}
+main.main > *{background-color:var(--cream)}
+.lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.bignum{font-size:132px;line-height:110px;font-weight:700;letter-spacing:-.06em;color:var(--accent);display:block;white-space:nowrap}
+.h1{margin:6px 0 0;font-size:24px;line-height:28px;font-weight:600;letter-spacing:-.03em}
+.sub{color:var(--muted);margin-top:2px}
+.navrow{display:flex;gap:8px;margin-top:14px}
+.hero{display:flex;flex-direction:column}
+
+/* mini mese */
+.mini{border-top:1px solid var(--ink);padding-top:12px}
+.mini-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.mini-head span{font-weight:600}
+.mini-head div{display:flex;gap:4px}
+.mini-head button{width:30px;height:30px;border:0;background:none;border-radius:8px;display:grid;place-items:center;color:var(--ink)}
+.mini-head button:hover{background:var(--paper)}
+.mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.mini-grid .dn{font-size:11px;color:var(--muted);font-weight:600;padding:2px 0}
+.mini-grid button{height:32px;border:0;background:none;border-radius:8px;font-size:13px;position:relative;font-variant-numeric:tabular-nums}
+.mini-grid button:hover{background:var(--paper)}
+.mini-grid button.out{color:var(--off)}
+.mini-grid button.hol{color:var(--accent)}
+.mini-grid button.sel{background:var(--ink);color:#fff;font-weight:700}
+.mini-grid button.today{background:var(--accent);color:#fff;font-weight:700}
+.mini-grid button.dot::after{content:"";position:absolute;bottom:3px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:2px;background:var(--accent)}
+.mini-grid button.sel.dot::after,.mini-grid button.today.dot::after{background:#fff}
+
+.slotlist{display:flex;flex-direction:column}
+.slotrow{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--ink)}
+.slotrow:last-child{border-bottom:1px solid var(--ink)}
+.slotrow .n{font-weight:600}
+.slotrow b{font-weight:600;display:block}
+.slotrow small{color:var(--muted);font-size:13px}
+.legend{display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:10px}
+.sw{width:14px;height:10px;border-radius:3px;flex:none}
+.switch{width:40px;height:24px;border-radius:999px;border:0;background:#cdc6b6;position:relative;padding:0;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:999px;background:var(--cream);transition:left .15s}
+.switch[aria-checked="true"]{background:var(--accent)}
+.switch[aria-checked="true"]::after{left:19px}
+
+/* griglia settimana / giorno */
+.card{border:1.5px solid var(--ink);border-radius:18px;overflow:hidden;background:var(--cream)}
+.gscroll{overflow:auto;max-height:calc(100vh - 140px);position:relative}
+.g-head,.g-all,.g-body{display:grid;min-width:0}
+.g-head{position:sticky;top:0;z-index:5;background:var(--cream);border-bottom:1.5px solid var(--ink)}
+.g-day{border:0;border-left:1px solid var(--line);background:var(--cream);display:flex;align-items:center;gap:8px;padding:10px 10px;text-align:left;min-width:0;flex-wrap:wrap}
+.g-day:hover{background:var(--paper)}
+.g-day .num{font-size:17px;font-weight:700;min-width:28px;height:28px;line-height:28px;text-align:center;border-radius:8px}
+.g-day.today{background:var(--paper)}
+.g-day.today .num{background:var(--accent);color:#fff}
+.g-day .hol{flex-basis:100%;font-size:11px;line-height:14px;color:var(--accent);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-all{border-bottom:1.5px solid var(--ink);background:var(--cream);position:sticky;z-index:4}
+.g-all .cap{font-size:11px;line-height:13px;color:var(--muted);padding:6px 6px 6px 0;text-align:right}
+.g-all .cell{border-left:1px solid var(--line);padding:4px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.g-hours{position:relative}
+.g-hours span{position:absolute;right:10px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:-9px}
+.g-col{position:relative;border-left:1px solid var(--line);background:var(--cream);cursor:cell}
+.g-col.we{background:var(--weekend)}
+.g-col.holcol{background:repeating-linear-gradient(135deg,var(--weekend) 0 8px,var(--cream) 8px 16px)}
+.g-line{position:absolute;left:0;right:0;border-top:1px solid var(--grid);pointer-events:none}
+.g-line.half{border-top:1px dashed #f1ebdf}
+.now{position:absolute;left:0;right:0;border-top:2px solid var(--accent);z-index:3;pointer-events:none}
+.now::before{content:"";position:absolute;left:-5px;top:-6px;width:10px;height:10px;border-radius:999px;background:var(--accent)}
+.ev{position:absolute;border:0;border-radius:8px;padding:3px 7px;overflow:hidden;text-align:left;font-size:12px;line-height:16px;display:flex;flex-direction:column;z-index:2;touch-action:none}
+.ev .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev .m{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
+.ev.short{flex-direction:row;align-items:center;padding-top:0;padding-bottom:0}
+.own{background:var(--ink);color:#fff}
+.booked{background:var(--accent);color:#fff}
+.pending{background:var(--cream);color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.free{background:var(--cream);color:var(--accent);outline:1.5px dashed var(--accent);outline-offset:-1.5px}
+.free:hover{background:#fbeeee}
+.ev.own[data-drag]{cursor:grab}
+.ev.dragging{opacity:.85;cursor:grabbing;box-shadow:0 8px 20px rgba(22,58,42,.25);z-index:10}
+.chip{border:0;border-radius:6px;padding:2px 6px;font-size:12px;line-height:16px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;font-weight:600;display:block}
+.chip .tm{font-weight:400;opacity:.85;margin-right:4px;font-variant-numeric:tabular-nums}
+.chip.own-l{background:none;color:var(--ink);font-weight:500;padding-left:14px;position:relative}
+.chip.own-l::before{content:"";position:absolute;left:4px;top:6px;width:6px;height:6px;border-radius:2px;background:var(--ink)}
+.chip.bk-l{background:none;color:var(--accent);font-weight:600;padding-left:14px;position:relative}
+.chip.bk-l::before{content:"";position:absolute;left:4px;top:6px;width:6px;height:6px;border-radius:2px;background:var(--accent)}
+
+/* mese */
+.m-head{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1.5px solid var(--ink)}
+.m-head span{padding:10px;border-left:1px solid var(--line)}
+.m-head span:first-child{border-left:0}
+.m-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(118px,1fr)}
+.m-cell{border-left:1px solid var(--line);border-top:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:3px;min-width:0;cursor:cell;position:relative}
+.m-cell:nth-child(7n+1){border-left:0}
+.m-cell:nth-child(-n+7){border-top:0}
+.m-cell.we{background:var(--weekend)}
+.m-cell.out{background:var(--weekend)}
+.m-cell.out .m-num{color:var(--off)}
+.m-top{display:flex;align-items:center;gap:6px;min-width:0}
+.m-num{border:0;background:none;font-size:15px;font-weight:600;min-width:28px;height:28px;border-radius:8px;padding:0 4px;font-variant-numeric:tabular-nums}
+.m-num:hover{background:var(--paper)}
+.m-cell.today .m-num{background:var(--accent);color:#fff;font-weight:700}
+.m-hol{font-size:11px;line-height:13px;color:var(--accent);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-more{border:0;background:none;color:var(--muted);font-size:12px;text-align:left;padding:0 6px;font-weight:600}
+.m-more:hover{color:var(--accent)}
+.m-free{margin-top:auto;align-self:flex-start;font-size:11px;font-weight:600;color:var(--accent);border:1.5px dashed var(--accent);border-radius:999px;padding:0 8px;line-height:16px}
+.m-dots{display:none;gap:3px;justify-content:center;margin-top:2px}
+.m-dots i{width:5px;height:5px;border-radius:2px;background:var(--ink)}
+.m-dots i.r{background:var(--accent)}
+
+/* agenda, liste */
+.list-card{border:1.5px solid var(--ink);border-radius:18px;padding:8px 24px 16px}
+.ag-day{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;padding:16px 0;border-top:1px solid var(--ink)}
+.ag-day:first-child{border-top:0}
+.ag-date{display:flex;flex-direction:column}
+.ag-date b{font-size:34px;line-height:34px;font-weight:700;letter-spacing:-.04em}
+.ag-date.today b{color:var(--accent)}
+.ag-date small{color:var(--muted)}
+.ag-items{display:flex;flex-direction:column;gap:6px}
+.row-btn{display:grid;grid-template-columns:96px 12px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:40px;border:0;background:none;text-align:left;padding:4px 8px;border-radius:10px;width:100%}
+.row-btn:hover{background:var(--paper)}
+.row-btn .tm{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+.row-btn .ttl{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-btn .ttl small{font-weight:400;color:var(--muted);margin-left:6px}
+.tag{font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px;white-space:nowrap;line-height:18px}
+.tag.red{background:var(--accent);color:#fff}
+.tag.outr{box-shadow:inset 0 0 0 1.5px var(--accent);color:var(--accent)}
+.tag.dash{border:1.5px dashed var(--accent);color:var(--accent);padding:1px 9px}
+.tag.ink{background:var(--ink);color:#fff}
+.tag.line{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.tag.grey{background:#efe9dc;color:var(--muted)}
+.empty{padding:28px 0;color:var(--muted)}
+
+/* giorno: pannello laterale */
+.day-wrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
+.panel{border:1.5px solid var(--ink);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;background:var(--cream)}
+.panel h2{margin:0}
+.times{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.time-btn{height:44px;border:1.5px solid var(--ink);border-radius:10px;background:var(--cream);font-weight:600;font-variant-numeric:tabular-nums}
+.time-btn:hover{background:var(--paper)}
+.time-btn[aria-pressed="true"]{background:var(--ink);color:#fff}
+
+/* slot condivisi */
+.types{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.type-card{border:1.5px solid var(--ink);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:12px;background:var(--cream)}
+.type-card.off{border-style:dashed}
+.type-card .head{display:flex;align-items:flex-start;gap:12px}
+.type-card .head div{flex:1;min-width:0}
+.type-card h3{margin:0;font-size:20px;line-height:24px;font-weight:700;letter-spacing:-.02em}
+.facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;font-size:13px}
+.facts dt{color:var(--muted)}
+.facts dd{margin:0;font-weight:500}
+.linkbox{display:flex;gap:8px;align-items:center;border-top:1px solid var(--ink);padding-top:12px}
+.linkbox code{flex:1;min-width:0;font-family:inherit;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.section-h{display:flex;align-items:center;gap:16px;margin:32px 0 12px;flex-wrap:wrap}
+.section-h h2{margin:0;font-size:20px;line-height:24px;font-weight:700;letter-spacing:-.02em;flex:1}
+.seg{display:flex;border:1.5px solid var(--ink);border-radius:10px;overflow:hidden}
+.seg button{height:38px;padding:0 14px;border:0;background:var(--cream)}
+.seg button+button{border-left:1.5px solid var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff;font-weight:600}
+.bk-row{display:grid;grid-template-columns:32px 40px minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--ink)}
+.bk-row:last-child{border-bottom:1px solid var(--ink)}
+.avatar{width:40px;height:40px;border-radius:10px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+.bk-row .who{display:flex;flex-direction:column;min-width:0}
+.bk-row .who b{font-weight:600}
+.bk-row .who span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bk-row .acts{display:flex;gap:6px}
+.bk-row .acts .btn{height:36px;padding:0 12px;border-radius:8px}
+
+/* modale */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(22,58,42,.35);display:flex;align-items:center;justify-content:center;padding:24px}
+.dialog{background:var(--cream);border:1.5px solid var(--ink);border-radius:18px;width:100%;max-width:540px;max-height:calc(100vh - 48px);overflow:auto;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 60px rgba(22,58,42,.25)}
+.dialog.wide{max-width:640px}
+.dlg-head{display:flex;align-items:flex-start;gap:12px;border-bottom:1.5px solid var(--gold);padding-bottom:12px}
+.dlg-head h2{flex:1;margin:0;font-size:24px;line-height:28px;font-weight:700;letter-spacing:-.03em}
+.dlg-foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;align-items:center;border-top:1px solid var(--ink);padding-top:16px}
+.dlg-foot .spacer{flex:1}
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;min-width:0}
+.field input[type=text],.field input[type=email],.field input[type=date],.field input[type=time],.field input[type=number],.field select,.field textarea{height:44px;border:1.5px solid var(--ink);border-radius:10px;padding:0 12px;font-weight:400;font-size:14px;background:var(--cream);width:100%;min-width:0}
+.field textarea{height:auto;padding:10px 12px;resize:vertical;min-height:72px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px #f6dcdd}
+.field.err input,.field.err textarea{border-color:var(--accent)}
+.err-msg{color:var(--accent);font-weight:500;font-size:12px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.check{display:flex;align-items:center;gap:8px;min-height:32px;font-weight:400;font-size:14px}
+.check input{accent-color:var(--ink);width:18px;height:18px;margin:0}
+.days-pick{display:flex;flex-wrap:wrap;gap:6px}
+.days-pick label{position:relative}
+.days-pick input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.days-pick span{display:grid;place-items:center;width:46px;height:38px;border:1.5px solid var(--ink);border-radius:10px;font-weight:600;font-size:13px}
+.days-pick input:checked+span{background:var(--ink);color:#fff}
+.days-pick input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.kv{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 16px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+.alert{display:flex;gap:12px;padding:12px 14px;border-radius:14px;border:1.5px solid var(--accent);background:#fbeeee}
+.note{color:var(--muted);font-size:13px}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--ink);color:#fff;min-width:280px;max-width:calc(100vw - 32px);box-shadow:0 12px 30px rgba(22,58,42,.3)}
+.toast .sq{width:10px;height:10px;border-radius:3px;background:var(--accent);flex:none}
+.toast span{flex:1}
+.toast button{height:34px;padding:0 12px;border:1.5px solid #fff;border-radius:8px;background:transparent;color:#fff;font-weight:600}
+
+/* ricerca */
+.res{display:flex;flex-direction:column}
+.res .row-btn{grid-template-columns:150px 12px minmax(0,1fr) auto}
+
+/* pagina pubblica */
+.pub-banner{display:flex;align-items:center;gap:12px;padding:10px 40px;background:var(--ink);color:#fff;font-size:13px;position:relative;z-index:2}
+.pub-banner span{flex:1}
+.pub-banner button{height:32px;padding:0 12px;border:1.5px solid #fff;border-radius:8px;background:transparent;color:#fff;font-weight:600}
+.pub-top{display:flex;align-items:center;gap:16px;min-height:64px;padding:0 40px;border-bottom:1.5px solid var(--gold);background:var(--cream)}
+.pub-top .who{margin-left:auto;color:var(--muted)}
+.pub-body{display:grid;grid-template-columns:280px minmax(0,1fr) 340px;gap:24px;padding:28px 40px 48px;align-items:start;max-width:1360px;margin:0 auto}
+.pub-body > *{background:var(--cream)}
+.pub-col{display:flex;flex-direction:column;gap:16px}
+.host{display:flex;align-items:center;gap:12px}
+.host .avatar{width:48px;height:48px;font-size:15px;border-radius:12px}
+.typepick{display:flex;flex-direction:column}
+.typepick label{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;align-items:start;padding:12px 0;border-top:1px solid var(--ink);cursor:pointer}
+.typepick label:last-child{border-bottom:1px solid var(--ink)}
+.typepick input{accent-color:var(--ink);width:18px;height:18px;margin:1px 0 0}
+.typepick b{display:block;font-weight:600}
+.typepick small{color:var(--muted);font-size:13px}
+.cal-card{border:1.5px solid var(--ink);border-radius:18px;padding:20px}
+.cal-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.cal-head h2{flex:1;margin:0;font-size:22px;line-height:28px;font-weight:700;letter-spacing:-.03em;text-transform:capitalize}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;text-align:center}
+.cal-grid .dn{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:4px 0}
+.cal-grid button{height:52px;border:0;border-radius:10px;background:none;font-size:15px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-variant-numeric:tabular-nums}
+.cal-grid button:hover:not(:disabled){background:var(--paper)}
+.cal-grid button:disabled{color:var(--off);font-weight:400;cursor:default}
+.cal-grid button i{width:5px;height:5px;border-radius:2px;background:var(--accent)}
+.cal-grid button.today{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.cal-grid button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.cal-grid button[aria-pressed="true"] i{background:#fff}
+.done{max-width:640px;margin:48px auto;padding:0 24px;display:flex;flex-direction:column;gap:16px;position:relative}
+.done-card{border:1.5px solid var(--ink);border-radius:18px;padding:28px;box-shadow:0 0 0 4px var(--cream),0 0 0 5.5px var(--gold);display:flex;flex-direction:column;gap:16px;background:var(--cream)}
+
+/* barra inferiore mobile */
+.bottom{display:none}
+.fab{display:none}
+
+
+/* incorpora */
+.emb{display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start}
+.emb-cfg{position:sticky;top:92px}
+.emb-fmt{border:0;padding:0;margin:0;display:flex;flex-direction:column}
+.emb-fmt legend{margin-bottom:8px;padding:0}
+.fmt{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;text-align:left;border:0;border-top:1px solid var(--ink);background:none;padding:10px 8px}
+.fmt:last-of-type{border-bottom:1px solid var(--ink)}
+.fmt b{display:block;font-weight:600}.fmt small{color:var(--muted);font-size:13px;line-height:18px;display:block}
+.fmt .n{font-weight:600}
+.fmt:hover{background:var(--paper)}
+.fmt[aria-pressed="true"]{background:var(--ink);color:#fff}.fmt[aria-pressed="true"] small{color:#d3dcd5}
+.field .seg{align-self:flex-start;font-weight:400}
+.emb-right{display:flex;flex-direction:column;gap:20px;min-width:0}
+.emb-prev{border:1.5px solid var(--ink);border-radius:18px;background:var(--paper);padding:16px;display:flex;flex-direction:column;gap:12px;align-items:center;overflow:auto}
+.emb-cap{align-self:flex-start;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.emb-prev.mob .site{width:375px;max-width:100%;border-radius:28px}
+.code{margin:0;background:var(--ink);color:#f4efe4;border-radius:12px;padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:19px;white-space:pre-wrap;word-break:break-all}
+.emb-steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.site{container-type:inline-size;width:100%;background:#fff;color:#222;border-radius:14px;box-shadow:0 8px 30px rgba(22,58,42,.10);overflow:hidden;position:relative;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;min-height:540px}
+.host-nav{display:flex;gap:20px;align-items:center;padding:16px 24px;border-bottom:1px solid #eee;font-size:14px;color:#555}
+.host-nav b{color:#111;margin-right:auto;font-size:16px}
+.host-main{padding:32px 24px;display:grid;gap:28px;align-items:start}
+.host-split{grid-template-columns:minmax(0,1fr) minmax(0,400px)}
+.host-text small{color:#7a7a7a;text-transform:uppercase;letter-spacing:.06em;font-size:12px}
+.host-text h3{font-size:32px;line-height:36px;margin:8px 0 12px;font-weight:700;letter-spacing:-.02em;color:#111}
+.host-text p{color:#444;line-height:24px;font-size:15px;margin:0 0 16px}
+.host-a{color:#163a2a;font-weight:600}
+.host-btn{height:46px;padding:0 20px;border:0;border-radius:12px;font-weight:600;background:#b3202a;color:#fff;font-family:'Inter Tight',system-ui,sans-serif}
+.host-btn.neutro{background:#163a2a}
+.host-ov{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;z-index:5;overflow:auto}
+.host-pop{position:relative;width:100%;max-width:440px}
+.host-x{position:absolute;top:12px;right:12px;z-index:2;width:36px;height:36px}
+@container (max-width:640px){.host-split{grid-template-columns:minmax(0,1fr)}.host-nav span{display:none}.host-main{padding:24px 16px}.host-text h3{font-size:26px;line-height:30px}}
+.bld{width:100%;min-width:860px;background:#f3f3f1;border-radius:14px;overflow:hidden;box-shadow:0 8px 30px rgba(22,58,42,.10);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#222;font-size:13px}
+.bld-top{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;border-bottom:1px solid #e3e3df}
+.bld-top b{font-size:14px}.bld-page{color:#777}.bld-sp{flex:1}
+.bld-b{padding:6px 12px;border:1px solid #d6d6d1;border-radius:8px}.bld-b.dark{background:#222;color:#fff;border-color:#222}
+.bld-body{display:grid;grid-template-columns:150px minmax(0,1fr) 240px;min-height:580px}
+.bld-blocks{background:#fff;border-right:1px solid #e3e3df;padding:12px;display:flex;flex-direction:column;gap:2px}
+.bld-blocks .lbl{color:#777;margin-bottom:6px}
+.bld-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;color:#444}
+.bld-item.on{background:#163a2a;color:#fff}
+.bld-canvas{padding:40px 16px 16px;overflow:auto}
+.bld-canvas .site{box-shadow:none;border:1px solid #e3e3df;min-height:0;overflow:visible}
+.bld-sel{position:relative;outline:2px solid #2f6fdf;outline-offset:6px;border-radius:4px}
+.bld-tag{position:absolute;top:-34px;left:-8px;background:#2f6fdf;color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px 6px 0 0;white-space:nowrap}
+.bld-insp{background:#fff;border-left:1px solid #e3e3df;padding:14px;display:flex;flex-direction:column;gap:12px;font-family:'Inter Tight',system-ui,sans-serif}
+.bld-insp .field{font-size:12px}
+.bld-insp .seg button{height:32px;padding:0 10px;font-size:12px}
+.bld-acc{display:flex;gap:8px;align-items:center;padding:8px;border:1px solid #e3e3df;border-radius:10px}
+.bld-acc .avatar{width:32px;height:32px;font-size:11px;border-radius:8px}
+.bld-acc small{display:block;color:#2a7a4b}
+/* modulo di prenotazione incorporabile */
+.wg{--wbg:#fbf8f1;--wink:#163a2a;--wmut:#4f5a52;--wacc:#b3202a;--wline:#e4dccb;background:var(--wbg);color:var(--wink);border:1.5px solid var(--wink);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;font-family:'Inter Tight',system-ui,sans-serif;font-size:14px;line-height:20px;width:100%;max-width:440px;text-align:left}
+.wg.neutro{--wbg:#ffffff;--wink:#1f2421;--wmut:#5c625e;--wacc:#163a2a;--wline:#e6e6e3;border-color:#d9d9d5}
+.wg-head{display:flex;gap:10px;align-items:center;padding-right:36px}
+.wg-av{width:40px;height:40px;border-radius:10px;background:var(--wink);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.wg-head b{display:block;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.wg-head small,.wg-mut{color:var(--wmut);font-size:13px}
+.wg-lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.wg-days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.wg-days button{flex:none;width:52px;height:60px;border:1.5px solid var(--wink);border-radius:12px;background:var(--wbg);color:var(--wink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.wg-days button span{font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.wg-days button b{font-size:18px;font-weight:700}
+.wg-days button[aria-pressed="true"],.wg-times button[aria-pressed="true"]{background:var(--wink);color:#fff}
+.wg-times{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.wg-times button{height:42px;border:1.5px solid var(--wink);border-radius:10px;background:var(--wbg);color:var(--wink);font-weight:600;font-variant-numeric:tabular-nums}
+.wg-form{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--wink);padding-top:12px}
+.wg .field{color:var(--wink)}
+.wg .field input,.wg .field textarea{border-color:var(--wink);background:var(--wbg);color:var(--wink)}
+.wg-submit{height:46px;border:0;border-radius:12px;background:var(--wacc);color:#fff;font-weight:600}
+.wg-sec{height:42px;border:1.5px solid var(--wink);border-radius:10px;background:var(--wbg);color:var(--wink);font-weight:600;align-self:flex-start;padding:0 16px}
+.wg-num{font-size:72px;line-height:60px;font-weight:700;letter-spacing:-.05em;color:var(--wacc)}
+.wg-done{display:flex;flex-direction:column;gap:10px}
+.wg-done p{margin:0}
+.wg-foot{font-size:11px;color:var(--wmut);display:flex;align-items:center;gap:4px;justify-content:center;border-top:1px solid var(--wline);padding-top:10px}
+@media (max-width:980px){.emb{grid-template-columns:minmax(0,1fr)}.emb-cfg{position:static}}
+@media (max-width:1180px){
+  .day-wrap{grid-template-columns:minmax(0,1fr)}
+  .pub-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .pub-body .pub-info{grid-column:1 / -1}
+}
+@media (max-width:980px){
+  .search input{width:160px}
+  aside.side{flex-basis:220px}
+  .bignum{font-size:104px;line-height:88px}
+}
+@media (max-width:760px){
+  .top{padding:0 16px;gap:8px;min-height:56px;flex-wrap:nowrap}
+  .views{display:none}
+  .top .search{flex:1;justify-content:flex-end}
+  .search input{width:100%;max-width:220px}
+  .top .btn-new{display:none}
+  .body{flex-direction:column;padding:16px 16px 96px;gap:16px}
+  aside.side{position:static;flex:none;width:100%;gap:12px}
+  main.main{width:100%;flex:none}
+  .side-extra{display:none !important}
+  .hero{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto;column-gap:14px;align-items:end}
+  .hero .lbl{grid-column:2;grid-row:1}
+  .hero .bignum{grid-column:1;grid-row:1 / 4;font-size:76px;line-height:64px}
+  .hero .h1{grid-column:2;grid-row:2;font-size:19px;line-height:24px;margin:0}
+  .hero .sub{grid-column:2;grid-row:3}
+  .navrow{grid-column:1 / -1;margin-top:12px}
+  .navrow .pill{flex:1}
+  .gscroll{max-height:calc(100vh - 290px)}
+  .g-day{padding:8px 6px;gap:4px}
+  .g-day .lbl{font-size:11px}
+  .m-grid{grid-auto-rows:64px}
+  .m-cell{padding:3px;align-items:center;cursor:pointer}
+  .m-items,.m-more,.m-free,.m-hol{display:none !important}
+  .m-dots{display:flex}
+  .m-head span{padding:8px 2px;text-align:center;font-size:11px}
+  .list-card{padding:4px 14px 12px}
+  .ag-day{grid-template-columns:64px minmax(0,1fr);gap:10px}
+  .ag-date b{font-size:26px;line-height:28px}
+  .row-btn{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"ttl tag" "tm tag";row-gap:0;padding:6px}
+  .row-btn .tm{grid-area:tm}
+  .row-btn .ttl{grid-area:ttl}
+  .row-btn .sw{display:none}
+  .row-btn .tag{grid-area:tag}
+  .res .row-btn{grid-template-columns:minmax(0,1fr) auto}
+  .bk-row{grid-template-columns:40px minmax(0,1fr) auto}
+  .bk-row > .n{display:none}
+  .bk-row .acts{grid-column:1 / -1}
+  .bk-row .acts .btn{flex:1}
+  .types{grid-template-columns:minmax(0,1fr)}
+  .overlay{align-items:flex-end;padding:0}
+  .dialog{max-width:none;border-radius:18px 18px 0 0;max-height:92vh;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}
+  .grid3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kv{grid-template-columns:96px minmax(0,1fr)}
+  .bottom{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--cream);border-top:1.5px solid var(--gold);padding-bottom:env(safe-area-inset-bottom)}
+  .bottom button{border:0;background:none;height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--muted)}
+  .bottom button[aria-current="page"]{color:var(--accent);font-weight:600}
+  .fab{display:grid;place-items:center;position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:31;width:56px;height:56px;border-radius:16px;border:0;background:var(--ink);color:#fff;box-shadow:0 10px 24px rgba(22,58,42,.3)}
+  #toast{bottom:calc(140px + env(safe-area-inset-bottom))}
+  .pub-banner{padding:10px 16px}
+  .pub-top{padding:0 16px}
+  .pub-top .who{display:none}
+  .pub-body{grid-template-columns:minmax(0,1fr);padding:16px 16px 40px}
+  .cal-card{padding:14px}
+  .cal-grid{gap:2px}
+  .cal-grid button{height:44px}
+  .done{margin:24px auto}
+}
+@media print{.neve,.top,.bottom,.fab,aside.side,#toast{display:none !important}.body{padding:0}.gscroll{max-height:none;overflow:visible}}
+</style>
+</head>
+<body>
+<div class="neve" id="neve" aria-hidden="true"></div>
+
+<div id="app">
+  <header class="top">
+    <a class="logo" href="#" data-act="view" data-v="week" aria-label="calendario.ch, torna al calendario">calendario.ch<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b08a3e" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.2 6.8H21l-5.5 4 2.1 6.7L12 16.4l-5.6 4.1 2.1-6.7L3 9.8h6.8z"/></svg></a>
+    <nav class="views" aria-label="Viste">
+      <button data-act="view" data-v="month">Mese</button>
+      <button data-act="view" data-v="week">Settimana</button>
+      <button data-act="view" data-v="day">Giorno</button>
+      <button data-act="view" data-v="agenda">Agenda</button>
+      <button data-act="view" data-v="slots">Slot condivisi</button>
+    </nav>
+    <div class="search" role="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+      <label class="sr" for="q">Cerca impegni e prenotazioni</label>
+      <input id="q" type="search" placeholder="Cerca" autocomplete="off">
+    </div>
+    <button class="icon-btn" data-act="settings" aria-label="Impostazioni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg></button>
+    <button class="btn dark btn-new" data-act="new"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuovo</button>
+  </header>
+  <div class="body">
+    <aside class="side" id="side" aria-label="Navigazione e riepilogo"></aside>
+    <main class="main" id="main"></main>
+  </div>
+  <nav class="bottom" aria-label="Viste">
+    <button data-act="view" data-v="month"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Mese</button>
+    <button data-act="view" data-v="week"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M9.2 5v15M14.8 5v15"/></svg>Giorni</button>
+    <button data-act="view" data-v="day"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Oggi</button>
+    <button data-act="view" data-v="agenda"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>Agenda</button>
+    <button data-act="view" data-v="slots"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2" stroke-dasharray="2.5 2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2" stroke-dasharray="2.5 2"/></svg>Slot</button>
+  </nav>
+  <button class="fab" data-act="new" aria-label="Nuovo impegno"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+
+<div id="pub" hidden></div>
+<div id="modal"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- utilità ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = n => String(n).padStart(2, '0');
+const key = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parse = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const addK = (k, n) => key(addDays(parse(k), n));
+const diffDays = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
+const fmtT = m => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
+const parseT = s => { const [h, m] = String(s).split(':').map(Number); return h * 60 + (m || 0); };
+const startOfWeek = d => addDays(d, -((d.getDay() + 6) % 7));
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const todayK = () => key(new Date());
+const nowMin = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); };
+const isoWeek = d => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return Math.ceil(((t - y0) / 864e5 + 1) / 7); };
+const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const GIORNI = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+const GB = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const longDate = k => { const d = parse(k); return GIORNI[d.getDay()] + ' ' + d.getDate() + ' ' + MESI[d.getMonth()] + ' ' + d.getFullYear(); };
+const shortDate = k => { const d = parse(k); return GB[d.getDay()].toLowerCase() + ' ' + d.getDate() + ' ' + MESI[d.getMonth()].slice(0, 3) + '.'; };
+const initials = n => String(n).trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase() || '·';
+const mq = window.matchMedia('(max-width: 760px)');
+const isMobile = () => mq.matches;
+const slugify = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'slot';
+
+const I = {
+  prev: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
+  next: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  chevL: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>',
+  chevR: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+  close: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  plus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  link: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+  alert: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b3202a" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4.5M12 16h.01"/></svg>',
+  star: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b08a3e" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.2 6.8H21l-5.5 4 2.1 6.7L12 16.4l-5.6 4.1 2.1-6.7L3 9.8h6.8z"/></svg>',
+  check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  down: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+  eye: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>'
+};
+
+/* ---------- festivi Ticino ---------- */
+const holCache = {};
+function holidays(y) {
+  if (holCache[y]) return holCache[y];
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
+    h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451),
+    mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1;
+  const E = new Date(y, mo - 1, da), r = {};
+  const fx = (mm, dd, n) => { r[y + '-' + pad(mm) + '-' + pad(dd)] = n; };
+  fx(1, 1, 'Capodanno'); fx(1, 6, 'Epifania'); fx(3, 19, 'San Giuseppe'); fx(5, 1, 'Festa del lavoro'); fx(6, 29, 'Santi Pietro e Paolo');
+  fx(8, 1, 'Festa nazionale'); fx(8, 15, 'Assunzione'); fx(11, 1, 'Ognissanti'); fx(12, 8, 'Immacolata'); fx(12, 25, 'Natale'); fx(12, 26, 'Santo Stefano');
+  r[key(addDays(E, 1))] = 'Lunedì di Pasqua'; r[key(addDays(E, 39))] = 'Ascensione'; r[key(addDays(E, 50))] = 'Lunedì di Pentecoste'; r[key(addDays(E, 60))] = 'Corpus Domini';
+  return (holCache[y] = r);
+}
+const holiday = k => holidays(+k.slice(0, 4))[k];
+
+/* ---------- dati ---------- */
+const STORE = 'calendario.ch.v1';
+let S;
+function seed() {
+  const mon = startOfWeek(new Date());
+  const D = n => key(addDays(mon, n));
+  const ev = (title, date, start, end, o = {}) => ({ id: uid(), title, date, start: start ? parseT(start) : 0, end: end ? parseT(end) : 0, allDay: !start, repeat: 'none', until: '', exdates: [], place: '', note: '', busy: false, endDate: '', ...o });
+  const t1 = { id: uid(), name: 'Consulenza', slug: 'consulenza', duration: 30, days: [1, 2, 3, 4, 5], from: '14:00', to: '17:30', buffer: 0, horizon: 30, notice: 2, confirm: 'auto', place: 'video', desc: 'Una prima chiacchierata per capire di cosa hai bisogno.', active: true, showInCal: true };
+  const t2 = { id: uid(), name: 'Colloquio', slug: 'colloquio', duration: 60, days: [2, 4], from: '09:00', to: '12:30', buffer: 15, horizon: 45, notice: 24, confirm: 'manual', place: 'sede', desc: 'Incontro di approfondimento in sede. La richiesta viene confermata a mano.', active: true, showInCal: true };
+  const bk = (name, email, t, date, start, status, note = '') => ({ id: uid(), typeId: t.id, date, start: parseT(start), end: parseT(start) + t.duration, name, email, note, status, created: new Date().toISOString() });
+  return {
+    v: 1,
+    settings: { owner: 'Eric Botta', handle: 'eric', startHour: 7, endHour: 21, snow: true },
+    types: [t1, t2],
+    events: [
+      ev('Stand-up', D(0), '08:45', '09:00', { repeat: 'weekdays' }),
+      ev('Pianificazione della settimana', D(0), '09:30', '10:30', { repeat: 'weekly', place: 'Ufficio' }),
+      ev('Revisione design', D(0), '14:00', '15:30', { note: 'Schermate di prenotazione e conferma.' }),
+      ev('Pranzo', D(1), '12:30', '13:30'),
+      ev('Palestra', D(2), '07:15', '08:15', { repeat: 'weekly' }),
+      ev('Call fornitori', D(2), '11:00', '12:00', { place: 'Video' }),
+      ev('Lavoro concentrato', D(3), '09:30', '12:00'),
+      ev('Dentista', D(4), '13:30', '14:30', { place: 'Mendrisio' }),
+      ev('Mercato', D(5), '10:00', '12:00'),
+      ev('Cena in famiglia', D(6), '19:00', '21:00'),
+      ev('Revisione mensile dei conti', D(9), '17:30', '18:30', { repeat: 'monthly' }),
+      ev('Corso di aggiornamento', D(11), '', '', { busy: true, place: 'Lugano' }),
+      ev('Trasferta a Zurigo', D(15), '', '', { endDate: D(16), busy: true }),
+      ev('Mercatino di Natale', D(19), '', '', {})
+    ],
+    bookings: [
+      bk('Luca Ferrari', 'luca.ferrari@esempio.ch', t2, D(1), '09:00', 'confirmed', 'Porto i documenti del contratto.'),
+      bk('Giulia Bernasconi', 'giulia.bernasconi@esempio.ch', t1, D(1), '14:30', 'confirmed'),
+      bk('Laura Rezzonico', 'laura.rezzonico@esempio.ch', t1, D(3), '15:00', 'confirmed'),
+      bk('Sara Moretti', 'sara.moretti@esempio.ch', t1, D(7), '16:00', 'cancelled'),
+      bk('Marco Pedrazzini', 'marco.pedrazzini@esempio.ch', t2, D(8), '10:15', 'pending', 'Vorrei parlare del rinnovo.'),
+      bk('Paolo Cattaneo', 'paolo.cattaneo@esempio.ch', t1, D(9), '14:00', 'confirmed'),
+      bk('Elena Fumagalli', 'elena.fumagalli@esempio.ch', t2, D(10), '09:00', 'pending'),
+      bk('Andrea Galli', 'andrea.galli@esempio.ch', t1, D(10), '16:30', 'confirmed')
+    ]
+  };
+}
+function load() {
+  try { const raw = localStorage.getItem(STORE); if (raw) { const d = JSON.parse(raw); if (d && d.v === 1) { S = d; return; } } } catch (e) {}
+  S = seed();
+}
+function save() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} cloudSave(); }
+/* salvataggio nel cloud dell'artifact (privato per chi lo usa) */
+const cloud = { ref: null, busy: false, again: false, t: null };
+function cloudSave() {
+  if (!cloud.ref) return;
+  clearTimeout(cloud.t);
+  cloud.t = setTimeout(async function push() {
+    if (cloud.busy) { cloud.again = true; return; }
+    cloud.busy = true;
+    try { await cloud.ref.set({ json: JSON.stringify(S), at: new Date().toISOString() }); } catch (e) { if (e && e.code === 'invalid_argument') cloud.ref = null; }
+    cloud.busy = false;
+    if (cloud.again) { cloud.again = false; push(); }
+  }, 600);
+}
+async function cloudInit() {
+  try {
+    if (!window.claude || typeof window.claude.use !== 'function') return;
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user) return;
+    const id = await user.id(); if (!id) return;
+    const ref = db.doc('data/users/' + id + '/calendario');
+    const snap = await ref.get();
+    cloud.ref = ref;
+    if (snap.exists) {
+      const d = JSON.parse(snap.data().json || 'null');
+      if (d && d.v === 1) { S = d; try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} buildSnow(); render(); }
+    } else cloudSave();
+  } catch (e) {}
+}
+const typeById = id => S.types.find(t => t.id === id);
+
+/* ---------- stato interfaccia ---------- */
+const ui = { view: 'week', cursor: todayK(), mini: null, search: '', bkFilter: 'upcoming', gridScroll: null, pub: null, modalClose: null };
+
+/* ---------- logica calendario ---------- */
+function occurs(e, k) {
+  if (k < e.date) return false;
+  if (e.exdates && e.exdates.includes(k)) return false;
+  const r = e.repeat || 'none';
+  if (r === 'none') return e.allDay && e.endDate ? k <= e.endDate : k === e.date;
+  if (e.until && k > e.until) return false;
+  const d = parse(k), s = parse(e.date);
+  switch (r) {
+    case 'daily': return true;
+    case 'weekdays': return d.getDay() >= 1 && d.getDay() <= 5;
+    case 'weekly': return d.getDay() === s.getDay();
+    case 'biweekly': return d.getDay() === s.getDay() && diffDays(e.date, k) % 14 === 0;
+    case 'monthly': return d.getDate() === s.getDate();
+    case 'yearly': return d.getDate() === s.getDate() && d.getMonth() === s.getMonth();
+  }
+  return false;
+}
+const REPEAT = { none: 'Non si ripete', daily: 'Ogni giorno', weekdays: 'Nei giorni feriali (lun–ven)', weekly: 'Ogni settimana', biweekly: 'Ogni due settimane', monthly: 'Ogni mese', yearly: 'Ogni anno' };
+const eventsOn = k => S.events.filter(e => occurs(e, k));
+const bookingsOn = k => S.bookings.filter(b => b.date === k && b.status !== 'cancelled');
+
+function freeSlots(k, t) {
+  if (!t || !t.active) return [];
+  const d = parse(k);
+  if (!t.days.includes(d.getDay()) || holiday(k)) return [];
+  const tk = todayK(), off = diffDays(tk, k);
+  if (off < 0 || off > t.horizon) return [];
+  const evs = eventsOn(k);
+  if (evs.some(e => e.allDay && e.busy)) return [];
+  const busy = evs.filter(e => !e.allDay).map(e => [e.start, e.end]).concat(bookingsOn(k).map(b => [b.start, b.end]));
+  const from = parseT(t.from), to = parseT(t.to), dur = +t.duration, buf = +t.buffer || 0;
+  const minAbs = nowMin() + (+t.notice || 0) * 60;
+  const out = [];
+  for (let s = from; s + dur <= to; s += dur + buf) {
+    if (off * 1440 + s < minAbs) continue;
+    const a = s - buf, b = s + dur + buf;
+    if (busy.some(([x, y]) => x < b && y > a)) continue;
+    out.push({ start: s, end: s + dur });
+  }
+  return out;
+}
+const anyFree = k => S.types.some(t => freeSlots(k, t).length);
+
+function timedItems(k) {
+  const items = [];
+  eventsOn(k).filter(e => !e.allDay).forEach(e => items.push({ kind: 'own', e, start: e.start, end: e.end }));
+  bookingsOn(k).forEach(b => items.push({ kind: b.status === 'pending' ? 'pending' : 'booked', b, start: b.start, end: b.end }));
+  S.types.filter(t => t.showInCal).forEach(t => freeSlots(k, t).forEach(s => items.push({ kind: 'free', t, start: s.start, end: s.end })));
+  return items;
+}
+function layout(items) {
+  items.sort((a, b) => a.start - b.start || b.end - a.end);
+  const groups = []; let cur = [], curEnd = -1;
+  for (const it of items) { if (cur.length && it.start >= curEnd) { groups.push(cur); cur = []; curEnd = -1; } cur.push(it); curEnd = Math.max(curEnd, it.end); }
+  if (cur.length) groups.push(cur);
+  for (const g of groups) { const ends = []; for (const it of g) { let c = ends.findIndex(e => e <= it.start); if (c < 0) { c = ends.length; ends.push(it.end); } else ends[c] = it.end; it.col = c; } g.forEach(it => { it.cols = ends.length; }); }
+  return items;
+}
+// elenco compatto per mese/agenda (senza slot liberi)
+function dayList(k) {
+  const all = eventsOn(k).filter(e => e.allDay).map(e => ({ kind: 'own', e, start: -1, end: -1, allDay: true }));
+  const timed = eventsOn(k).filter(e => !e.allDay).map(e => ({ kind: 'own', e, start: e.start, end: e.end }))
+    .concat(bookingsOn(k).map(b => ({ kind: b.status === 'pending' ? 'pending' : 'booked', b, start: b.start, end: b.end })));
+  timed.sort((a, b) => a.start - b.start);
+  return all.concat(timed);
+}
+const itemTitle = it => it.e ? it.e.title : (typeById(it.b.typeId)?.name || 'Prenotazione') + ' · ' + it.b.name;
+
+/* ---------- neve ---------- */
+function buildSnow() {
+  const box = $('#neve'); box.innerHTML = '';
+  const n = Math.min(260, Math.round(window.innerWidth * 0.16));
+  let h = '';
+  for (let i = 0; i < n; i++) {
+    const r = ((i * 9301 + 49297) % 233280) / 233280, q = ((i * 4271 + 1013) % 997) / 997, L = i % 3;
+    const size = L === 0 ? 2 + q * 2.5 : L === 1 ? 4 + q * 3 : 7 + q * 4;
+    const dur = L === 0 ? 20 + r * 8 : L === 1 ? 13 + r * 6 : 8 + r * 4;
+    const sw = 2.4 + q * 2.6;
+    h += `<span class="fiocco" style="left:${((i * 37.7 + q * 9) % 100).toFixed(2)}%;animation:cadere${(i >> 1) % 3} ${dur.toFixed(1)}s linear -${(r * dur).toFixed(1)}s infinite;filter:${L === 0 ? 'blur(.6px)' : L === 2 ? 'blur(.9px)' : 'none'}"><i style="width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;opacity:${L === 0 ? .6 : L === 1 ? .85 : .95};animation:oscilla ${sw.toFixed(1)}s ease-in-out -${(q * sw).toFixed(1)}s infinite alternate"></i></span>`;
+  }
+  box.innerHTML = h;
+  document.body.classList.toggle('no-snow', !S.settings.snow);
+}
+
+/* ---------- render principale ---------- */
+function render() {
+  const pub = ui.view === 'pub';
+  $('#app').hidden = pub; $('#pub').hidden = !pub;
+  if (pub) { renderPub(); return; }
+  const curV = ui.view === 'embed' ? 'slots' : ui.view;
+  $$('.views [data-v], .bottom [data-v]').forEach(b => { if (b.dataset.v === curV && !ui.search) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  $('#side').hidden = ui.view === 'embed';
+  renderSide();
+  renderMain();
+}
+
+function rangeKeys() {
+  const c = parse(ui.cursor);
+  if (ui.view === 'week') {
+    if (isMobile()) return [0, 1, 2].map(i => key(addDays(c, i)));
+    const m = startOfWeek(c); return [0, 1, 2, 3, 4, 5, 6].map(i => key(addDays(m, i)));
+  }
+  if (ui.view === 'day') return [ui.cursor];
+  if (ui.view === 'month') { const f = new Date(c.getFullYear(), c.getMonth(), 1), n = new Date(c.getFullYear(), c.getMonth() + 1, 0).getDate(); return Array.from({ length: n }, (_, i) => key(addDays(f, i))); }
+  if (ui.view === 'agenda') return Array.from({ length: 30 }, (_, i) => key(addDays(c, i)));
+  return [];
+}
+
+function heroData() {
+  const c = parse(ui.cursor), keys = rangeKeys();
+  switch (ui.view) {
+    case 'week': {
+      if (isMobile()) { const a = parse(keys[0]), b = parse(keys[2]); return { lbl: 'Settimana', num: isoWeek(c), h1: rangeLabel(a, b), sub: '' }; }
+      const a = parse(keys[0]), b = parse(keys[6]);
+      return { lbl: 'Settimana', num: isoWeek(c), h1: rangeLabel(a, b), sub: String(b.getFullYear()) };
+    }
+    case 'day': return { lbl: cap(GIORNI[c.getDay()]), num: c.getDate(), h1: c.getDate() + ' ' + MESI[c.getMonth()] + ' ' + c.getFullYear(), sub: holiday(ui.cursor) || (ui.cursor === todayK() ? 'Oggi' : '') };
+    case 'month': return { lbl: 'Mese', num: pad(c.getMonth() + 1), h1: cap(MESI[c.getMonth()]) + ' ' + c.getFullYear(), sub: '' };
+    case 'agenda': { const n = keys.reduce((s, k) => s + dayList(k).length, 0); return { lbl: 'Prossimi 30 giorni', num: n, h1: 'Dal ' + c.getDate() + ' ' + MESI[c.getMonth()], sub: n === 1 ? '1 voce in agenda' : n + ' voci in agenda' }; }
+    case 'embed': { const t = typeById(ui.embed.typeId); return { lbl: 'Incorpora', num: pad(S.types.indexOf(t) + 1), h1: t ? t.name : '', sub: 'Link, pulsante, modulo o blocco pagine.ch' }; }
+    case 'slots': { const n = S.bookings.filter(b => b.status !== 'cancelled' && b.date >= todayK()).length; return { lbl: 'Slot condivisi', num: n, h1: 'Prenotazioni in arrivo', sub: S.types.filter(t => t.active).length + ' tipi di slot attivi' }; }
+  }
+  return { lbl: '', num: '', h1: '', sub: '' };
+}
+function rangeLabel(a, b) {
+  if (a.getMonth() === b.getMonth()) return a.getDate() + ' – ' + b.getDate() + ' ' + MESI[a.getMonth()];
+  return a.getDate() + ' ' + MESI[a.getMonth()].slice(0, 3) + '. – ' + b.getDate() + ' ' + MESI[b.getMonth()].slice(0, 3) + '.';
+}
+
+function renderSide() {
+  const hd = heroData();
+  const navLbl = { week: isMobile() ? 'giorni' : 'settimana', day: 'giorno', month: 'mese', agenda: 'periodo' }[ui.view];
+  const nav = ui.view === 'slots' || ui.view === 'embed' ? '' : `<div class="navrow">
+      <button class="round" data-act="prev" aria-label="${navLbl === 'settimana' ? 'Settimana precedente' : 'Indietro'}">${I.prev}</button>
+      <button class="pill" data-act="today">Oggi</button>
+      <button class="round" data-act="next" aria-label="${navLbl === 'settimana' ? 'Settimana successiva' : 'Avanti'}">${I.next}</button>
+    </div>`;
+  // slot nel periodo
+  const keys = rangeKeys();
+  const rows = S.types.map((t, i) => {
+    const free = keys.reduce((s, k) => s + freeSlots(k, t).length, 0);
+    const booked = keys.reduce((s, k) => s + bookingsOn(k).filter(b => b.typeId === t.id).length, 0);
+    const what = !keys.length ? (t.active ? 'Attivo' : 'In pausa') : (free === 1 ? '1 libero' : free + ' liberi') + ' · ' + (booked === 1 ? '1 prenotato' : booked + ' prenotati');
+    return `<div class="slotrow"><span class="n">${pad(i + 1)}</span><div><b>${esc(t.name)} · ${t.duration} min</b><small>${what}</small></div>
+      <button class="switch" role="switch" aria-checked="${t.showInCal}" aria-label="Mostra gli slot liberi di ${esc(t.name)} nel calendario" title="Mostra nel calendario" data-act="toggleshow" data-id="${t.id}"></button></div>`;
+  }).join('');
+  $('#side').innerHTML = `
+    <div class="hero">
+      <span class="lbl">${esc(hd.lbl)}</span>
+      <span class="bignum oro">${esc(hd.num)}</span>
+      <h1 class="h1">${esc(hd.h1)}</h1>
+      ${hd.sub ? `<div class="sub">${esc(hd.sub)}</div>` : ''}
+      ${nav}
+    </div>
+    ${miniHTML()}
+    <section class="side-extra">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><h2 class="lbl" style="margin:0">Slot condivisi</h2><button class="btn ghost" style="height:28px" data-act="view" data-v="slots">Gestisci</button></div>
+      <div class="slotlist">${rows || '<p class="note">Nessun tipo di slot. Creane uno da Slot condivisi.</p>'}</div>
+    </section>
+    <section class="legend side-extra" aria-label="Legenda">
+      <span><i class="sw" style="background:#163a2a"></i>Impegno</span>
+      <span><i class="sw" style="background:#b3202a"></i>Prenotato da altri</span>
+      <span><i class="sw" style="box-shadow:inset 0 0 0 1.5px #b3202a"></i>Da confermare</span>
+      <span><i class="sw" style="border:1.5px dashed #b3202a"></i>Slot libero</span>
+    </section>`;
+}
+
+function miniHTML() {
+  const base = ui.mini ? parse(ui.mini) : parse(ui.cursor);
+  const f = new Date(base.getFullYear(), base.getMonth(), 1), st = startOfWeek(f), tk = todayK();
+  let cells = ['L', 'M', 'M', 'G', 'V', 'S', 'D'].map(d => `<span class="dn" aria-hidden="true">${d}</span>`).join('');
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(st, i), k = key(d);
+    const cls = [d.getMonth() !== f.getMonth() ? 'out' : '', holiday(k) ? 'hol' : '', k === tk ? 'today' : (k === ui.cursor ? 'sel' : ''), dayList(k).length ? 'dot' : ''].join(' ');
+    cells += `<button class="${cls}" data-act="mini-go" data-k="${k}" aria-label="${longDate(k)}${holiday(k) ? ', ' + holiday(k) : ''}"${k === ui.cursor ? ' aria-current="date"' : ''}>${d.getDate()}</button>`;
+  }
+  return `<section class="mini side-extra" aria-label="Mini calendario">
+    <div class="mini-head"><span>${cap(MESI[f.getMonth()])} ${f.getFullYear()}</span><div>
+      <button data-act="mini-prev" aria-label="Mese precedente">${I.chevL}</button><button data-act="mini-next" aria-label="Mese successivo">${I.chevR}</button></div></div>
+    <div class="mini-grid">${cells}</div></section>`;
+}
+
+function renderMain() {
+  const m = $('#main');
+  if (ui.search.trim()) { m.innerHTML = searchHTML(); return; }
+  switch (ui.view) {
+    case 'week': m.innerHTML = `<div class="card">${gridHTML(rangeKeys())}</div>`; afterGrid(); break;
+    case 'day': m.innerHTML = `<div class="day-wrap"><div class="card">${gridHTML([ui.cursor])}</div>${dayPanelHTML(ui.cursor)}</div>`; afterGrid(); break;
+    case 'month': m.innerHTML = monthHTML(); break;
+    case 'agenda': m.innerHTML = agendaHTML(); break;
+    case 'slots': m.innerHTML = slotsHTML(); break;
+    case 'embed': m.innerHTML = embedHTML(); embedParts(); break;
+  }
+}
+
+/* ---------- griglia ---------- */
+const HH = 56;
+function gridHTML(keys) {
+  const sh = S.settings.startHour, eh = S.settings.endHour, tot = (eh - sh) * HH, tk = todayK();
+  const cols = `52px repeat(${keys.length}, minmax(${keys.length > 3 ? 104 : 0}px, 1fr))`;
+  const head = `<div class="g-head" style="grid-template-columns:${cols}"><span></span>` + keys.map(k => {
+    const d = parse(k), hol = holiday(k);
+    return `<button class="g-day${k === tk ? ' today' : ''}" data-act="goday" data-k="${k}" aria-label="Apri ${longDate(k)}"><span class="lbl">${GB[d.getDay()]}</span><span class="num">${d.getDate()}</span>${hol ? `<span class="hol">${esc(hol)}</span>` : ''}</button>`;
+  }).join('') + '</div>';
+  const alls = keys.map(k => eventsOn(k).filter(e => e.allDay));
+  const allRow = alls.some(a => a.length) ? `<div class="g-all" style="grid-template-columns:${cols}"><span class="cap">Tutto il giorno</span>` +
+    alls.map((a, i) => `<div class="cell">${a.map(e => `<button class="chip own" data-act="openev" data-id="${e.id}" data-k="${keys[i]}">${esc(e.title)}</button>`).join('')}</div>`).join('') + '</div>' : '';
+  let hours = '';
+  for (let h = sh; h < eh; h++) hours += `<span style="top:${(h - sh) * HH}px">${h > sh ? pad(h) + ':00' : ''}</span>`;
+  let lines = '';
+  for (let h = sh; h < eh; h++) lines += `<div class="g-line" style="top:${(h - sh) * HH}px"></div><div class="g-line half" style="top:${(h - sh) * HH + HH / 2}px"></div>`;
+  const colsHTML = keys.map(k => {
+    const d = parse(k), we = d.getDay() === 0 || d.getDay() === 6;
+    const items = layout(timedItems(k)).map(it => itemHTML(it, k)).join('');
+    const now = k === tk && nowMin() >= sh * 60 && nowMin() < eh * 60 ? `<div class="now" style="top:${(nowMin() - sh * 60) / 60 * HH}px" aria-hidden="true"></div>` : '';
+    return `<div class="g-col${we ? ' we' : ''}${holiday(k) ? ' holcol' : ''}" data-act="newat" data-k="${k}" style="height:${tot}px" aria-label="${longDate(k)}">${lines}${items}${now}</div>`;
+  }).join('');
+  return `<div class="gscroll" id="gscroll">${head}${allRow}<div class="g-body" style="grid-template-columns:${cols}"><div class="g-hours" style="height:${tot}px" aria-hidden="true">${hours}</div>${colsHTML}</div></div>`;
+}
+function itemHTML(it, k) {
+  const sh = S.settings.startHour * 60, eh = S.settings.endHour * 60;
+  const s = Math.max(it.start, sh), e = Math.min(it.end, eh);
+  if (e <= s) return '';
+  const top = (s - sh) / 60 * HH + 1, h = Math.max((e - s) / 60 * HH - 2, 18);
+  const left = `calc(3px + (100% - 6px) * ${it.col} / ${it.cols})`, width = `calc((100% - 6px) / ${it.cols} - 2px)`;
+  const short = (it.end - it.start) < 45;
+  const time = fmtT(it.start) + '–' + fmtT(it.end);
+  let title, meta, attrs, aria;
+  if (it.kind === 'own') {
+    title = it.e.title; meta = time + (it.e.place ? ' · ' + it.e.place : '');
+    attrs = `data-act="openev" data-id="${it.e.id}" data-k="${k}" data-drag="1"`; aria = title + ', ' + time;
+  } else if (it.kind === 'free') {
+    title = it.t.name; meta = time + ' · libero';
+    attrs = `data-act="freeslot" data-t="${it.t.id}" data-k="${k}" data-s="${it.start}"`; aria = 'Slot libero ' + it.t.name + ', ' + time;
+  } else {
+    title = it.b.name; meta = time + ' · ' + (typeById(it.b.typeId)?.name || '') + (it.kind === 'pending' ? ' · da confermare' : '');
+    attrs = `data-act="openbk" data-id="${it.b.id}"`; aria = (it.kind === 'pending' ? 'Da confermare: ' : 'Prenotato: ') + it.b.name + ', ' + time;
+  }
+  const cls = it.kind === 'own' ? 'own' : it.kind === 'free' ? 'free' : it.kind === 'pending' ? 'pending' : 'booked';
+  return `<button type="button" class="ev ${cls}${short ? ' short' : ''}" style="top:${top}px;height:${h}px;left:${left};width:${width}" ${attrs} aria-label="${esc(aria)}"><span class="t">${short ? `<span style="font-weight:400;opacity:.85;margin-right:4px">${fmtT(it.start)}</span>` : ''}${esc(title)}</span>${short ? '' : `<span class="m">${esc(meta)}</span>`}</button>`;
+}
+function afterGrid() {
+  const g = $('#gscroll'); if (!g) return;
+  const all = g.querySelector('.g-all'); if (all) all.style.top = g.querySelector('.g-head').offsetHeight + 'px';
+  if (ui.gridScroll == null) { const target = Math.max(8, Math.min(S.settings.endHour - 1, (new Date().getHours()) - 1)); ui.gridScroll = Math.max(0, (target - S.settings.startHour) * HH); }
+  g.scrollTop = ui.gridScroll;
+  g.addEventListener('scroll', () => { ui.gridScroll = g.scrollTop; }, { passive: true });
+}
+
+function dayPanelHTML(k) {
+  const list = dayList(k);
+  const rows = list.length ? list.map(rowBtnHTML).join('') : `<p class="empty" style="padding:8px 0">Nessun impegno. Giornata libera.</p>`;
+  const frees = S.types.filter(t => t.active).map(t => {
+    const fs = freeSlots(k, t);
+    return `<div style="display:flex;flex-direction:column;gap:8px"><span style="font-weight:600">${esc(t.name)} · ${t.duration} min <span class="note" style="font-weight:400">${fs.length ? (fs.length === 1 ? '1 libero' : fs.length + ' liberi') : 'nessuno libero'}</span></span>
+      ${fs.length ? `<div class="times">${fs.map(s => `<button class="time-btn" data-act="freeslot" data-t="${t.id}" data-k="${k}" data-s="${s.start}" aria-label="Prenota ${esc(t.name)} alle ${fmtT(s.start)}">${fmtT(s.start)}</button>`).join('')}</div>` : ''}</div>`;
+  }).join('<div style="border-top:1px solid var(--line)"></div>');
+  return `<div style="display:flex;flex-direction:column;gap:16px">
+    <section class="panel"><h2 class="lbl">In programma</h2><div style="display:flex;flex-direction:column;gap:4px;margin:0 -8px">${rows}</div>
+      <button class="btn line" data-act="new" data-k="${k}">${I.plus}Aggiungi impegno</button></section>
+    <section class="panel"><h2 class="lbl">Slot prenotabili</h2>${frees || '<p class="note">Nessun tipo di slot attivo.</p>'}</section></div>`;
+}
+
+function rowBtnHTML(it) {
+  const tm = it.allDay ? 'Tutto il giorno' : fmtT(it.start) + '–' + fmtT(it.end);
+  if (it.e) {
+    const rep = it.e.repeat && it.e.repeat !== 'none';
+    return `<button class="row-btn" data-act="openev" data-id="${it.e.id}" data-k="${it.k || ''}"><span class="tm">${tm}</span><i class="sw" style="background:#163a2a;width:10px"></i><span class="ttl">${esc(it.e.title)}${it.e.place ? `<small>${esc(it.e.place)}</small>` : ''}</span>${rep ? '<span class="tag line">Ricorrente</span>' : (it.e.busy ? '<span class="tag line">Occupato</span>' : '<span></span>')}</button>`;
+  }
+  const t = typeById(it.b.typeId);
+  return `<button class="row-btn" data-act="openbk" data-id="${it.b.id}"><span class="tm">${tm}</span><i class="sw" style="${it.kind === 'pending' ? 'box-shadow:inset 0 0 0 1.5px #b3202a' : 'background:#b3202a'};width:10px"></i><span class="ttl">${esc(it.b.name)}<small>${esc(t ? t.name : '')}</small></span>${it.kind === 'pending' ? '<span class="tag outr">Da confermare</span>' : '<span class="tag red">Prenotato</span>'}</button>`;
+}
+
+/* ---------- mese ---------- */
+function monthHTML() {
+  const c = parse(ui.cursor), f = new Date(c.getFullYear(), c.getMonth(), 1), st = startOfWeek(f), tk = todayK();
+  const head = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(d => `<span class="lbl">${d}</span>`).join('');
+  const weeks = (addDays(st, 35).getMonth() === f.getMonth()) ? 6 : 5;
+  let cells = '';
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = addDays(st, i), k = key(d), out = d.getMonth() !== f.getMonth(), we = d.getDay() === 0 || d.getDay() === 6;
+    const list = dayList(k), hol = holiday(k);
+    const shown = list.slice(0, 3).map(it => {
+      if (it.allDay) return `<button class="chip own" data-act="openev" data-id="${it.e.id}" data-k="${k}">${esc(it.e.title)}</button>`;
+      if (it.e) return `<button class="chip own-l" data-act="openev" data-id="${it.e.id}" data-k="${k}"><span class="tm">${fmtT(it.start)}</span>${esc(it.e.title)}</button>`;
+      return `<button class="chip ${it.kind === 'pending' ? 'bk-l' : 'booked'}" data-act="openbk" data-id="${it.b.id}"><span class="tm">${fmtT(it.start)}</span>${esc(it.b.name)}</button>`;
+    }).join('');
+    const more = list.length > 3 ? `<button class="m-more" data-act="goday" data-k="${k}">+${list.length - 3} ${list.length - 3 === 1 ? 'altro' : 'altri'}</button>` : '';
+    const nFree = S.types.reduce((s, t) => s + freeSlots(k, t).length, 0);
+    const dots = list.slice(0, 4).map(it => `<i class="${it.e ? '' : 'r'}"></i>`).join('');
+    cells += `<div class="m-cell${out ? ' out' : ''}${we ? ' we' : ''}${k === tk ? ' today' : ''}" data-act="newday" data-k="${k}">
+      <div class="m-top"><button class="m-num" data-act="goday" data-k="${k}" aria-label="Apri ${longDate(k)}">${d.getDate()}</button>${hol ? `<span class="m-hol">${esc(hol)}</span>` : ''}</div>
+      <div class="m-items" style="display:flex;flex-direction:column;gap:2px">${shown}</div>${more}
+      ${nFree ? `<span class="m-free">${nFree === 1 ? '1 slot libero' : nFree + ' slot liberi'}</span>` : ''}
+      <div class="m-dots" aria-hidden="true">${dots}</div></div>`;
+  }
+  return `<div class="card"><div class="m-head">${head}</div><div class="m-grid">${cells}</div></div>`;
+}
+
+/* ---------- agenda ---------- */
+function agendaHTML() {
+  const tk = todayK();
+  const days = rangeKeys().map(k => ({ k, list: dayList(k).map(it => ({ ...it, k })) })).filter(d => d.list.length);
+  if (!days.length) return `<div class="list-card"><p class="empty">Nessun impegno nei prossimi 30 giorni.</p></div>`;
+  return `<div class="list-card">${days.map(({ k, list }) => {
+    const d = parse(k);
+    return `<div class="ag-day"><div class="ag-date${k === tk ? ' today' : ''}"><b>${d.getDate()}</b><small>${GB[d.getDay()]} · ${MESI[d.getMonth()].slice(0, 3)}.${holiday(k) ? '<br>' + esc(holiday(k)) : ''}</small></div><div class="ag-items">${list.map(rowBtnHTML).join('')}</div></div>`;
+  }).join('')}</div>`;
+}
+
+/* ---------- ricerca ---------- */
+function searchHTML() {
+  const q = ui.search.trim().toLowerCase();
+  const evs = S.events.filter(e => (e.title + ' ' + e.place + ' ' + e.note).toLowerCase().includes(q));
+  const bks = S.bookings.filter(b => (b.name + ' ' + b.email + ' ' + b.note + ' ' + (typeById(b.typeId)?.name || '')).toLowerCase().includes(q));
+  const rows = evs.map(e => {
+    const when = e.repeat !== 'none' ? REPEAT[e.repeat] : shortDate(e.date) + (e.allDay ? '' : ' ' + fmtT(e.start));
+    return `<button class="row-btn" data-act="openev" data-id="${e.id}" data-k="${e.date}" data-jump="1"><span class="tm">${esc(when)}</span><i class="sw" style="background:#163a2a;width:10px"></i><span class="ttl">${esc(e.title)}${e.place ? `<small>${esc(e.place)}</small>` : ''}</span><span class="tag ink">Impegno</span></button>`;
+  }).concat(bks.sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start)).map(b => `<button class="row-btn" data-act="openbk" data-id="${b.id}" data-jump="1"><span class="tm">${shortDate(b.date)} ${fmtT(b.start)}</span><i class="sw" style="background:#b3202a;width:10px"></i><span class="ttl">${esc(b.name)}<small>${esc(typeById(b.typeId)?.name || '')}</small></span>${statusTag(b.status)}</button>`));
+  return `<div class="list-card"><div class="section-h" style="margin:12px 0"><h2>Risultati per «${esc(ui.search.trim())}»</h2><button class="btn line" data-act="clearsearch">Chiudi ricerca</button></div>
+    <div class="res">${rows.length ? rows.join('') : '<p class="empty">Nessun risultato. Prova con un nome, un luogo o una parola della nota.</p>'}</div></div>`;
+}
+const statusTag = s => s === 'pending' ? '<span class="tag outr">Da confermare</span>' : s === 'cancelled' ? '<span class="tag grey">Annullato</span>' : '<span class="tag red">Prenotato</span>';
+
+/* ---------- slot condivisi ---------- */
+const PLACE = { sede: 'In sede', video: 'Videochiamata', telefono: 'Telefono' };
+const pubLink = t => 'calendario.ch/' + (S.settings.handle || 'io') + '/' + t.slug;
+function daysLabel(ds) {
+  const order = [1, 2, 3, 4, 5, 6, 0], s = order.filter(d => ds.includes(d));
+  if (s.join() === '1,2,3,4,5') return 'Lun–ven';
+  if (s.length === 7) return 'Tutti i giorni';
+  return s.map(d => GB[d]).join(', ') || 'Nessun giorno';
+}
+function slotsHTML() {
+  const tk = todayK();
+  const cards = S.types.map(t => {
+    const next = nextFree(t);
+    return `<article class="type-card${t.active ? '' : ' off'}">
+      <div class="head"><div><span class="lbl" style="color:var(--muted)">${t.duration} minuti</span><h3>${esc(t.name)}</h3></div>
+        <button class="switch" role="switch" aria-checked="${t.active}" aria-label="${esc(t.name)} prenotabile" data-act="toggleactive" data-id="${t.id}"></button></div>
+      ${t.desc ? `<p style="margin:0;color:var(--muted)">${esc(t.desc)}</p>` : ''}
+      <dl class="facts"><dt>Giorni</dt><dd>${daysLabel(t.days)}, ${t.from}–${t.to}</dd><dt>Luogo</dt><dd>${PLACE[t.place] || ''}</dd>
+        <dt>Conferma</dt><dd>${t.confirm === 'manual' ? 'Manuale, la approvi tu' : 'Automatica'}</dd><dt>Preavviso</dt><dd>${noticeLabel(t.notice)} · prenotabile fino a ${t.horizon} giorni</dd>
+        ${t.buffer ? `<dt>Pausa</dt><dd>${t.buffer} min tra un incontro e l’altro</dd>` : ''}
+        <dt>Prossimo libero</dt><dd>${t.active ? (next ? shortDate(next.k) + ' alle ' + fmtT(next.s) : 'Nessuno nel periodo') : 'In pausa'}</dd></dl>
+      <div class="linkbox"><code title="${esc(pubLink(t))}">${esc(pubLink(t))}</code>
+        <button class="icon-btn" style="border:0;background:var(--ink);color:#fff" data-act="copylink" data-id="${t.id}" aria-label="Copia il link di ${esc(t.name)}">${I.link}</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn line" data-act="edittype" data-id="${t.id}">Modifica</button><button class="btn line" data-act="embed" data-id="${t.id}">Incorpora</button><button class="btn dark" data-act="openpub" data-id="${t.id}"${t.active ? '' : ' disabled'}>${I.eye}Pagina di prenotazione</button></div>
+    </article>`;
+  }).join('');
+  const f = ui.bkFilter;
+  let list = S.bookings.slice();
+  if (f === 'upcoming') list = list.filter(b => b.status !== 'cancelled' && b.date >= tk);
+  if (f === 'pending') list = list.filter(b => b.status === 'pending' && b.date >= tk);
+  if (f === 'past') list = list.filter(b => b.status !== 'cancelled' && b.date < tk);
+  if (f === 'cancelled') list = list.filter(b => b.status === 'cancelled');
+  list.sort((a, b) => (a.date + pad(a.start)).localeCompare(b.date + pad(b.start)) * (f === 'past' ? -1 : 1));
+  const nPend = S.bookings.filter(b => b.status === 'pending' && b.date >= tk).length;
+  const rows = list.map((b, i) => {
+    const t = typeById(b.typeId);
+    const acts = b.status === 'pending' ? `<button class="btn red" data-act="confirmbk" data-id="${b.id}">${I.check}Conferma</button>` : '';
+    return `<div class="bk-row"><span class="n" style="font-weight:600">${pad(i + 1)}</span><span class="avatar">${esc(initials(b.name))}</span>
+      <button class="who" data-act="openbk" data-id="${b.id}" style="border:0;background:none;text-align:left;padding:0"><b>${esc(b.name)}</b><span>${cap(shortDate(b.date))}, ${fmtT(b.start)} · ${esc(t ? t.name : 'Tipo eliminato')}</span></button>
+      ${statusTag(b.status)}<div class="acts">${acts}</div></div>`;
+  }).join('');
+  return `<div class="section-h" style="margin-top:0"><h2>Tipi di slot</h2><button class="btn dark" data-act="newtype">${I.plus}Nuovo tipo di slot</button></div>
+    <div class="types">${cards || '<p class="empty">Nessun tipo di slot.</p>'}</div>
+    <div class="section-h"><h2>Prenotazioni</h2>
+      <div class="seg" role="group" aria-label="Filtra prenotazioni">${[['upcoming', 'In arrivo'], ['pending', 'Da confermare' + (nPend ? ' (' + nPend + ')' : '')], ['past', 'Passate'], ['cancelled', 'Annullate']].map(([v, l]) => `<button data-act="bkfilter" data-v="${v}" aria-pressed="${f === v}">${l}</button>`).join('')}</div></div>
+    <div>${rows || `<p class="empty">${{ upcoming: 'Nessuna prenotazione in arrivo.', pending: 'Niente da confermare.', past: 'Nessuna prenotazione passata.', cancelled: 'Nessuna prenotazione annullata.' }[f]}</p>`}</div>`;
+}
+const noticeLabel = h => !h ? 'Nessun preavviso' : h < 24 ? h + (h === 1 ? ' ora' : ' ore') + ' di preavviso' : (h / 24) + (h === 24 ? ' giorno' : ' giorni') + ' di preavviso';
+function nextFree(t) {
+  const tk = todayK();
+  for (let i = 0; i <= t.horizon; i++) { const k = addK(tk, i), fs = freeSlots(k, t); if (fs.length) return { k, s: fs[0].start }; }
+  return null;
+}
+
+/* ---------- modali ---------- */
+let lastFocus = null;
+function openModal(html, { wide = false, onClose } = {}) {
+  lastFocus = document.activeElement;
+  $('#modal').innerHTML = `<div class="overlay" data-overlay><div class="dialog${wide ? ' wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="dlg-title">${html}</div></div>`;
+  ui.modalClose = onClose || null;
+  const first = $('#modal').querySelector('[autofocus]') || $('#modal').querySelector('input,select,textarea,button');
+  if (first) first.focus();
+}
+function closeModal() {
+  if (!$('#modal').innerHTML) return;
+  $('#modal').innerHTML = '';
+  if (ui.modalClose) { const f = ui.modalClose; ui.modalClose = null; f(); }
+  if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+}
+const dlgHead = t => `<div class="dlg-head"><h2 id="dlg-title">${t}</h2><button class="icon-btn" data-act="close" aria-label="Chiudi">${I.close}</button></div>`;
+function fieldErr(form, name, msg) {
+  const el = form.elements[name]; const f = el.closest('.field');
+  f.classList.add('err'); el.setAttribute('aria-invalid', 'true');
+  let m = f.querySelector('.err-msg'); if (!m) { m = document.createElement('span'); m.className = 'err-msg'; m.id = 'err-' + name; f.appendChild(m); }
+  m.textContent = msg; el.setAttribute('aria-describedby', m.id);
+}
+function clearErr(form) { $$('.field.err', form).forEach(f => { f.classList.remove('err'); f.querySelector('.err-msg')?.remove(); }); $$('[aria-invalid]', form).forEach(e => e.removeAttribute('aria-invalid')); }
+
+/* evento */
+function openEvent(e, k, preset = {}) {
+  const isNew = !e;
+  const d = e || { title: '', date: preset.date || ui.cursor, start: preset.start ?? 540, end: preset.end ?? 600, allDay: !!preset.allDay, repeat: 'none', until: '', place: '', note: '', busy: false, endDate: '' };
+  const rec = !isNew && d.repeat !== 'none';
+  const html = dlgHead(isNew ? 'Nuovo impegno' : 'Impegno') + `
+  <form id="evf" novalidate style="display:flex;flex-direction:column;gap:14px">
+    <label class="field">Titolo<input type="text" name="title" value="${esc(d.title)}" placeholder="Di cosa si tratta?" autofocus maxlength="120"></label>
+    <div class="grid2">
+      <label class="field">${rec ? 'Inizio della serie' : 'Data'}<input type="date" name="date" value="${d.date}"></label>
+      <label class="check" style="align-self:end;min-height:44px"><input type="checkbox" name="allDay"${d.allDay ? ' checked' : ''}>Tutto il giorno</label>
+    </div>
+    <div class="grid2" data-timed${d.allDay ? ' hidden' : ''}>
+      <label class="field">Dalle<input type="time" name="start" value="${fmtT(d.start)}" step="300"></label>
+      <label class="field">Alle<input type="time" name="end" value="${fmtT(d.end)}" step="300"></label>
+    </div>
+    <div class="grid2" data-allday${d.allDay ? '' : ' hidden'}>
+      <label class="field">Fino al (incluso)<input type="date" name="endDate" value="${d.endDate || d.date}"></label>
+      <label class="check" style="align-self:end;min-height:44px"><input type="checkbox" name="busy"${d.busy ? ' checked' : ''}>Blocca gli slot condivisi</label>
+    </div>
+    <div class="grid2">
+      <label class="field">Ripetizione<select name="repeat">${Object.entries(REPEAT).map(([v, l]) => `<option value="${v}"${d.repeat === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="field" data-until${d.repeat === 'none' ? ' hidden' : ''}>Ripeti fino al<input type="date" name="until" value="${d.until || ''}"></label>
+    </div>
+    <label class="field">Luogo<input type="text" name="place" value="${esc(d.place)}" placeholder="Facoltativo" maxlength="120"></label>
+    <label class="field">Nota<textarea name="note" rows="2" placeholder="Facoltativa" maxlength="1000">${esc(d.note)}</textarea></label>
+    ${rec ? `<p class="note" style="margin:0">Questo impegno si ripete (${REPEAT[d.repeat].toLowerCase()}). Le modifiche valgono per tutta la serie.</p>` : ''}
+    <div class="dlg-foot">
+      ${isNew ? '' : (rec ? `<button type="button" class="btn ghost" data-act="delocc">Elimina solo il ${esc(shortDate(k || d.date))}</button><button type="button" class="btn ghost" data-act="delev">Elimina la serie</button>` : `<button type="button" class="btn ghost" data-act="delev">Elimina</button>`)}
+      <span class="spacer"></span>
+      <button type="button" class="btn line" data-act="close">Annulla</button>
+      <button type="submit" class="btn dark">${isNew ? 'Crea' : 'Salva'}</button>
+    </div>
+  </form>`;
+  openModal(html);
+  const f = $('#evf');
+  f.elements.allDay.addEventListener('change', () => { $('[data-timed]', f).hidden = f.elements.allDay.checked; $('[data-allday]', f).hidden = !f.elements.allDay.checked; });
+  f.elements.repeat.addEventListener('change', () => { $('[data-until]', f).hidden = f.elements.repeat.value === 'none'; });
+  f.elements.start.addEventListener('change', () => {
+    const s = parseT(f.elements.start.value), en = parseT(f.elements.end.value);
+    if (!(en > s)) f.elements.end.value = fmtT(Math.min(s + 60, 23 * 60 + 55));
+  });
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); clearErr(f);
+    const v = Object.fromEntries(new FormData(f));
+    const allDay = f.elements.allDay.checked;
+    let ok = true;
+    if (!v.title.trim()) { fieldErr(f, 'title', 'Scrivi un titolo.'); ok = false; }
+    if (!v.date) { fieldErr(f, 'date', 'Scegli una data.'); ok = false; }
+    if (!allDay && (!v.start || !v.end || parseT(v.end) <= parseT(v.start))) { fieldErr(f, 'end', 'La fine deve essere dopo l’inizio.'); ok = false; }
+    if (allDay && v.endDate && v.date && v.endDate < v.date) { fieldErr(f, 'endDate', 'La data di fine viene prima dell’inizio.'); ok = false; }
+    if (v.repeat !== 'none' && v.until && v.until < v.date) { fieldErr(f, 'until', 'Questa data viene prima dell’inizio.'); ok = false; }
+    if (!ok) { f.querySelector('[aria-invalid]').focus(); return; }
+    const data = { title: v.title.trim(), date: v.date, allDay, start: allDay ? 0 : parseT(v.start), end: allDay ? 0 : parseT(v.end), repeat: v.repeat, until: v.repeat !== 'none' ? (v.until || '') : '', place: v.place.trim(), note: v.note.trim(), busy: allDay && f.elements.busy.checked, endDate: allDay && v.repeat === 'none' && v.endDate > v.date ? v.endDate : '' };
+    if (isNew) { S.events.push({ id: uid(), exdates: [], ...data }); toast('Impegno creato'); }
+    else { Object.assign(e, data); toast('Impegno aggiornato'); }
+    save(); ui.cursor = ui.view === 'month' || ui.view === 'agenda' ? ui.cursor : data.date; closeModal(); render();
+  });
+  f.addEventListener('click', ev => {
+    const a = ev.target.closest('[data-act]'); if (!a) return;
+    if (a.dataset.act === 'delev') { const snap = snapshot(); S.events = S.events.filter(x => x !== e); save(); closeModal(); render(); toast(rec ? 'Serie eliminata' : 'Impegno eliminato', () => restore(snap)); }
+    if (a.dataset.act === 'delocc') { const snap = snapshot(); e.exdates = (e.exdates || []).concat(k); save(); closeModal(); render(); toast('Eliminato solo per il ' + shortDate(k), () => restore(snap)); }
+  });
+}
+
+/* prenotazione (vista proprietario) */
+function openBooking(b) {
+  const t = typeById(b.typeId);
+  const html = dlgHead(esc(b.name)) + `
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${statusTag(b.status)}${t ? `<span class="tag line">${esc(t.name)} · ${t.duration} min</span>` : ''}</div>
+    <dl class="kv">
+      <dt>Quando</dt><dd>${cap(longDate(b.date))}, ${fmtT(b.start)}–${fmtT(b.end)}</dd>
+      <dt>E-mail</dt><dd><a href="mailto:${esc(b.email)}">${esc(b.email)}</a></dd>
+      <dt>Luogo</dt><dd>${t ? PLACE[t.place] : 'Non indicato'}</dd>
+      <dt>Nota</dt><dd>${b.note ? esc(b.note) : '<span class="note">Nessuna nota</span>'}</dd>
+      <dt>Ricevuta</dt><dd>${new Date(b.created).toLocaleString('it-CH', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</dd>
+    </dl>
+    <div class="dlg-foot">
+      ${b.status !== 'cancelled' ? `<button class="btn ghost" data-act="cancelbk" data-id="${b.id}">Annulla la prenotazione</button>` : `<button class="btn ghost" data-act="restorebk" data-id="${b.id}">Ripristina</button>`}
+      <span class="spacer"></span>
+      <button class="btn line" data-act="icsbk" data-id="${b.id}">${I.down}.ics</button>
+      ${b.status === 'pending' ? `<button class="btn red" data-act="confirmbk" data-id="${b.id}">${I.check}Conferma</button>` : `<button class="btn dark" data-act="close">Chiudi</button>`}
+    </div>`;
+  openModal(html);
+}
+
+/* slot libero: prenota per qualcuno o blocca */
+function openFreeSlot(t, k, s) {
+  const html = dlgHead('Slot libero') + `
+    <p style="margin:0"><b>${esc(t.name)}</b> · ${cap(longDate(k))}, ${fmtT(s)}–${fmtT(s + t.duration)}</p>
+    <form id="fsf" novalidate style="display:flex;flex-direction:column;gap:14px">
+      <p class="note" style="margin:0">Inserisci i dati se prenoti tu per qualcuno, oppure blocca l’orario per non renderlo prenotabile.</p>
+      <div class="grid2"><label class="field">Nome e cognome<input type="text" name="name" autofocus maxlength="80"></label>
+      <label class="field">E-mail<input type="email" name="email" maxlength="120"></label></div>
+      <label class="field">Nota<textarea name="note" rows="2" maxlength="1000"></textarea></label>
+      <div class="dlg-foot"><button type="button" class="btn ghost" data-act="blockslot">Blocca l’orario</button><span class="spacer"></span>
+        <button type="button" class="btn line" data-act="close">Annulla</button><button type="submit" class="btn red">Prenota</button></div>
+    </form>`;
+  openModal(html);
+  const f = $('#fsf');
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); clearErr(f);
+    const v = Object.fromEntries(new FormData(f)); let ok = true;
+    if (!v.name.trim()) { fieldErr(f, 'name', 'Serve un nome.'); ok = false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) { fieldErr(f, 'email', 'Controlla l’indirizzo e-mail.'); ok = false; }
+    if (!ok) { f.querySelector('[aria-invalid]').focus(); return; }
+    if (!freeSlots(k, t).some(x => x.start === s)) { closeModal(); render(); toast('Questo orario non è più libero'); return; }
+    S.bookings.push({ id: uid(), typeId: t.id, date: k, start: s, end: s + t.duration, name: v.name.trim(), email: v.email.trim(), note: v.note.trim(), status: 'confirmed', created: new Date().toISOString() });
+    save(); closeModal(); render(); toast('Prenotazione registrata');
+  });
+  f.addEventListener('click', ev => {
+    if (ev.target.closest('[data-act="blockslot"]')) {
+      S.events.push({ id: uid(), title: 'Non disponibile', date: k, start: s, end: s + t.duration, allDay: false, repeat: 'none', until: '', exdates: [], place: '', note: '', busy: false, endDate: '' });
+      save(); closeModal(); render(); toast('Orario bloccato');
+    }
+  });
+}
+
+/* tipo di slot */
+function openType(t) {
+  const isNew = !t;
+  const d = t || { name: '', slug: '', duration: 30, days: [1, 2, 3, 4, 5], from: '09:00', to: '17:00', buffer: 0, horizon: 30, notice: 2, confirm: 'auto', place: 'video', desc: '', active: true, showInCal: true };
+  const opts = (arr, cur, lab) => arr.map(x => `<option value="${x}"${+cur === x ? ' selected' : ''}>${lab(x)}</option>`).join('');
+  const html = dlgHead(isNew ? 'Nuovo tipo di slot' : 'Modifica tipo di slot') + `
+  <form id="tf" novalidate style="display:flex;flex-direction:column;gap:14px">
+    <div class="grid2"><label class="field">Nome<input type="text" name="name" value="${esc(d.name)}" placeholder="Per esempio Consulenza" autofocus maxlength="60"></label>
+      <label class="field">Indirizzo del link<input type="text" name="slug" value="${esc(d.slug)}" placeholder="consulenza" maxlength="40"></label></div>
+    <label class="field">Descrizione per chi prenota<textarea name="desc" rows="2" maxlength="400">${esc(d.desc)}</textarea></label>
+    <div class="grid3">
+      <label class="field">Durata<select name="duration">${opts([15, 20, 30, 45, 60, 90, 120], d.duration, x => x + ' min')}</select></label>
+      <label class="field">Dalle<input type="time" name="from" value="${d.from}" step="900"></label>
+      <label class="field">Alle<input type="time" name="to" value="${d.to}" step="900"></label>
+    </div>
+    <fieldset style="border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:6px"><legend class="field" style="padding:0;margin-bottom:6px">Giorni</legend>
+      <div class="days-pick">${[1, 2, 3, 4, 5, 6, 0].map(x => `<label><input type="checkbox" name="days" value="${x}"${d.days.includes(x) ? ' checked' : ''}><span>${GB[x]}</span></label>`).join('')}</div></fieldset>
+    <div class="grid3">
+      <label class="field">Pausa tra incontri<select name="buffer">${opts([0, 5, 10, 15, 30], d.buffer, x => x ? x + ' min' : 'Nessuna')}</select></label>
+      <label class="field">Preavviso minimo<select name="notice">${opts([0, 1, 2, 4, 12, 24, 48], d.notice, x => x ? (x < 24 ? x + (x === 1 ? ' ora' : ' ore') : x / 24 + (x === 24 ? ' giorno' : ' giorni')) : 'Nessuno')}</select></label>
+      <label class="field">Prenotabile fino a<select name="horizon">${opts([7, 14, 30, 45, 60, 90], d.horizon, x => x + ' giorni')}</select></label>
+    </div>
+    <div class="grid2">
+      <fieldset style="border:0;padding:0;margin:0"><legend class="field" style="padding:0;margin-bottom:4px">Luogo</legend>${Object.entries(PLACE).map(([v, l]) => `<label class="check"><input type="radio" name="place" value="${v}"${d.place === v ? ' checked' : ''}>${l}</label>`).join('')}</fieldset>
+      <fieldset style="border:0;padding:0;margin:0"><legend class="field" style="padding:0;margin-bottom:4px">Conferma</legend>
+        <label class="check"><input type="radio" name="confirm" value="auto"${d.confirm === 'auto' ? ' checked' : ''}>Automatica</label>
+        <label class="check"><input type="radio" name="confirm" value="manual"${d.confirm === 'manual' ? ' checked' : ''}>La approvo io</label>
+        <label class="check" style="margin-top:6px"><input type="checkbox" name="showInCal"${d.showInCal ? ' checked' : ''}>Mostra gli slot liberi nel calendario</label></fieldset>
+    </div>
+    <div class="dlg-foot">${isNew ? '' : '<button type="button" class="btn ghost" data-act="deltype">Elimina tipo</button>'}<span class="spacer"></span>
+      <button type="button" class="btn line" data-act="close">Annulla</button><button type="submit" class="btn dark">${isNew ? 'Crea' : 'Salva'}</button></div>
+  </form>`;
+  openModal(html, { wide: true });
+  const f = $('#tf');
+  f.elements.name.addEventListener('input', () => { if (isNew && !f.elements.slug.dataset.touched) f.elements.slug.value = slugify(f.elements.name.value); });
+  f.elements.slug.addEventListener('input', () => { f.elements.slug.dataset.touched = '1'; });
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); clearErr(f);
+    const fd = new FormData(f); const v = Object.fromEntries(fd);
+    const days = fd.getAll('days').map(Number);
+    let ok = true;
+    if (!v.name.trim()) { fieldErr(f, 'name', 'Dai un nome a questo tipo di slot.'); ok = false; }
+    const slug = slugify(v.slug || v.name);
+    if (S.types.some(x => x !== t && x.slug === slug)) { fieldErr(f, 'slug', 'Questo indirizzo è già usato.'); ok = false; }
+    if (!v.from || !v.to || parseT(v.to) - parseT(v.from) < +v.duration) { fieldErr(f, 'to', 'La fascia oraria è più corta della durata.'); ok = false; }
+    if (!days.length) { const fs = f.querySelector('.days-pick'); if (!fs.nextElementSibling) fs.insertAdjacentHTML('afterend', '<span class="err-msg">Scegli almeno un giorno.</span>'); ok = false; }
+    if (!ok) { (f.querySelector('[aria-invalid]') || f.querySelector('[name=days]')).focus(); return; }
+    const data = { name: v.name.trim(), slug, desc: v.desc.trim(), duration: +v.duration, from: v.from, to: v.to, days, buffer: +v.buffer, notice: +v.notice, horizon: +v.horizon, place: v.place, confirm: v.confirm, showInCal: !!f.elements.showInCal.checked };
+    if (isNew) S.types.push({ id: uid(), active: true, ...data }); else Object.assign(t, data);
+    save(); closeModal(); render(); toast(isNew ? 'Tipo di slot creato' : 'Tipo di slot aggiornato');
+  });
+  f.addEventListener('click', ev => {
+    if (!ev.target.closest('[data-act="deltype"]')) return;
+    const fut = S.bookings.filter(b => b.typeId === t.id && b.status !== 'cancelled' && b.date >= todayK()).length;
+    if (fut && !ev.target.dataset.sure) { ev.target.dataset.sure = '1'; ev.target.textContent = `Annulla anche ${fut === 1 ? '1 prenotazione' : fut + ' prenotazioni'} ed elimina`; return; }
+    const snap = snapshot();
+    S.bookings.forEach(b => { if (b.typeId === t.id && b.date >= todayK()) b.status = 'cancelled'; });
+    S.types = S.types.filter(x => x !== t); save(); closeModal(); render(); toast('Tipo di slot eliminato', () => restore(snap));
+  });
+}
+
+/* impostazioni */
+function openSettings() {
+  const st = S.settings;
+  const hrs = (from, to, cur) => Array.from({ length: to - from + 1 }, (_, i) => from + i).map(h => `<option value="${h}"${h === cur ? ' selected' : ''}>${pad(h)}:00</option>`).join('');
+  const html = dlgHead('Impostazioni') + `
+  <form id="sf" novalidate style="display:flex;flex-direction:column;gap:14px">
+    <div class="grid2"><label class="field">Il tuo nome<input type="text" name="owner" value="${esc(st.owner)}" maxlength="80"></label>
+      <label class="field">Nome nel link<input type="text" name="handle" value="${esc(st.handle)}" maxlength="40"></label></div>
+    <div class="grid2"><label class="field">La giornata inizia alle<select name="startHour">${hrs(0, 12, st.startHour)}</select></label>
+      <label class="field">e finisce alle<select name="endHour">${hrs(13, 24, st.endHour)}</select></label></div>
+    <label class="check"><input type="checkbox" name="snow"${st.snow ? ' checked' : ''}>Neve sullo sfondo</label>
+    <div style="border-top:1px solid var(--ink);padding-top:14px;display:flex;flex-direction:column;gap:10px">
+      <span class="lbl">Dati</span>
+      <p class="note" style="margin:0">Il calendario si salva da solo ed è visibile solo a te. Esporta un file .ics per tenerne una copia o aprirlo in un’altra app.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn line" data-act="export">${I.down}Esporta .ics</button>
+        <label class="btn line" style="cursor:pointer">Importa .ics<input type="file" accept=".ics,text/calendar" name="imp" class="sr"></label>
+        <button type="button" class="btn ghost" data-act="reset">Ripristina i dati di esempio</button>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--ink);padding-top:14px"><span class="lbl">Scorciatoie</span>
+      <p class="note" style="margin:6px 0 0">N nuovo · T oggi · M mese · W settimana · D giorno · A agenda · S slot · frecce avanti e indietro · / cerca</p></div>
+    <div class="dlg-foot"><span class="spacer"></span><button type="button" class="btn line" data-act="close">Annulla</button><button type="submit" class="btn dark">Salva</button></div>
+  </form>`;
+  openModal(html);
+  const f = $('#sf');
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); const v = Object.fromEntries(new FormData(f));
+    S.settings = { ...st, owner: v.owner.trim() || st.owner, handle: slugify(v.handle || st.handle), startHour: +v.startHour, endHour: +v.endHour, snow: f.elements.snow.checked };
+    ui.gridScroll = null; save(); document.body.classList.toggle('no-snow', !S.settings.snow); closeModal(); render(); toast('Impostazioni salvate');
+  });
+  f.elements.imp.addEventListener('change', async () => {
+    const file = f.elements.imp.files[0]; if (!file) return;
+    const n = importICS(await file.text()); save(); closeModal(); render();
+    toast(n ? (n === 1 ? '1 impegno importato' : n + ' impegni importati') : 'Nel file non ho trovato impegni da importare');
+  });
+  f.addEventListener('click', ev => {
+    const a = ev.target.closest('[data-act]'); if (!a) return;
+    if (a.dataset.act === 'export') download('calendario.ics', toICS());
+    if (a.dataset.act === 'reset') {
+      if (!a.dataset.sure) { a.dataset.sure = '1'; a.textContent = 'Conferma: sostituisci tutti i dati'; return; }
+      const snap = snapshot(); S = seed(); save(); closeModal(); buildSnow(); render(); toast('Dati di esempio ripristinati', () => restore(snap));
+    }
+  });
+}
+
+/* ---------- ics ---------- */
+const icsEsc = s => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+const icsDate = k => k.replace(/-/g, '');
+const icsDT = (k, m) => icsDate(k) + 'T' + pad(Math.floor(m / 60)) + pad(m % 60) + '00';
+const stamp = () => new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+function vevent(uidv, title, k, start, end, o = {}) {
+  const L = ['BEGIN:VEVENT', 'UID:' + uidv + '@calendario.ch', 'DTSTAMP:' + stamp(), 'SUMMARY:' + icsEsc(title)];
+  if (o.allDay) { L.push('DTSTART;VALUE=DATE:' + icsDate(k), 'DTEND;VALUE=DATE:' + icsDate(addK(o.endDate || k, 1))); }
+  else { L.push('DTSTART;TZID=Europe/Zurich:' + icsDT(k, start), 'DTEND;TZID=Europe/Zurich:' + icsDT(k, end)); }
+  if (o.rrule) L.push('RRULE:' + o.rrule);
+  if (o.exdates && o.exdates.length) L.push(...o.exdates.map(x => o.allDay ? 'EXDATE;VALUE=DATE:' + icsDate(x) : 'EXDATE;TZID=Europe/Zurich:' + icsDT(x, start)));
+  if (o.place) L.push('LOCATION:' + icsEsc(o.place));
+  if (o.note) L.push('DESCRIPTION:' + icsEsc(o.note));
+  L.push('END:VEVENT'); return L;
+}
+function rrule(e) {
+  const map = { daily: 'FREQ=DAILY', weekdays: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', weekly: 'FREQ=WEEKLY', biweekly: 'FREQ=WEEKLY;INTERVAL=2', monthly: 'FREQ=MONTHLY', yearly: 'FREQ=YEARLY' };
+  if (!map[e.repeat]) return '';
+  return map[e.repeat] + (e.until ? ';UNTIL=' + icsDate(e.until) + 'T235959Z' : '');
+}
+const icsWrap = lines => ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//calendario.ch//IT', 'CALSCALE:GREGORIAN', ...lines, 'END:VCALENDAR'].join('\r\n');
+function toICS() {
+  const L = [];
+  S.events.forEach(e => L.push(...vevent(e.id, e.title, e.date, e.start, e.end, { allDay: e.allDay, endDate: e.endDate, rrule: rrule(e), exdates: e.exdates, place: e.place, note: e.note })));
+  S.bookings.filter(b => b.status !== 'cancelled').forEach(b => { const t = typeById(b.typeId); L.push(...vevent(b.id, (t ? t.name : 'Prenotazione') + ' · ' + b.name, b.date, b.start, b.end, { note: b.email + (b.note ? '\n' + b.note : '') })); });
+  return icsWrap(L);
+}
+function bookingICS(b) { const t = typeById(b.typeId); return icsWrap(vevent(b.id, (t ? t.name : 'Appuntamento') + ' con ' + S.settings.owner, b.date, b.start, b.end, { place: t ? PLACE[t.place] : '' })); }
+function importICS(text) {
+  const lines = text.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '').split(/\r?\n/);
+  let cur = null, n = 0;
+  const un = s => s.replace(/\\n/gi, '\n').replace(/\\([,;\\])/g, '$1');
+  const dt = (params, val) => {
+    const m = val.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?/); if (!m) return null;
+    if (!m[4] || /VALUE=DATE(?!-)/.test(params)) return { k: `${m[1]}-${m[2]}-${m[3]}`, m: 0, allDay: true };
+    let d = m[7] ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5])) : new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    return { k: key(d), m: d.getHours() * 60 + d.getMinutes(), allDay: false };
+  };
+  for (const raw of lines) {
+    if (raw === 'BEGIN:VEVENT') { cur = {}; continue; }
+    if (raw === 'END:VEVENT') {
+      if (cur && cur.s && !S.events.some(e => e.importUid && e.importUid === cur.uid)) {
+        const s = cur.s, e = cur.e || s;
+        let repeat = 'none';
+        if (cur.rr) { const fq = (cur.rr.match(/FREQ=(\w+)/) || [])[1]; const iv = (cur.rr.match(/INTERVAL=(\d+)/) || [])[1]; if (fq === 'DAILY') repeat = 'daily'; if (fq === 'WEEKLY') repeat = /BYDAY=MO,TU,WE,TH,FR/.test(cur.rr) ? 'weekdays' : iv === '2' ? 'biweekly' : 'weekly'; if (fq === 'MONTHLY') repeat = 'monthly'; if (fq === 'YEARLY') repeat = 'yearly'; }
+        const until = cur.rr && (cur.rr.match(/UNTIL=(\d{4})(\d{2})(\d{2})/) || []).slice(1).join('-');
+        const endK = s.allDay ? addK(e.k, -1) : '';
+        S.events.push({ id: uid(), importUid: cur.uid || '', title: cur.sum || 'Senza titolo', date: s.k, allDay: s.allDay, start: s.allDay ? 0 : s.m, end: s.allDay ? 0 : (e.k === s.k && e.m > s.m ? e.m : Math.min(s.m + 60, 1439)), repeat, until: until || '', exdates: [], place: cur.loc || '', note: cur.desc || '', busy: false, endDate: s.allDay && repeat === 'none' && endK > s.k ? endK : '' });
+        n++;
+      }
+      cur = null; continue;
+    }
+    if (!cur) continue;
+    const i = raw.indexOf(':'); if (i < 0) continue;
+    const head = raw.slice(0, i), val = raw.slice(i + 1), name = head.split(';')[0].toUpperCase();
+    if (name === 'SUMMARY') cur.sum = un(val);
+    else if (name === 'DTSTART') cur.s = dt(head, val);
+    else if (name === 'DTEND') cur.e = dt(head, val);
+    else if (name === 'LOCATION') cur.loc = un(val);
+    else if (name === 'DESCRIPTION') cur.desc = un(val);
+    else if (name === 'RRULE') cur.rr = val;
+    else if (name === 'UID') cur.uid = val;
+  }
+  return n;
+}
+async function download(name, text) {
+  const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  if (!framed) { plainDownload(name, text); return; }
+  let dl = null;
+  try { if (window.claude && window.claude.use) dl = await window.claude.use('downloads'); } catch (e) {}
+  if (dl) {
+    try { await dl.save({ filename: name, data: text }); toast('File ' + name + ' salvato'); return; }
+    catch (e) { if (e && e.code === 'declined') return; }
+  }
+  copyText(text, 'Contenuto .ics copiato: incollalo in un file ' + name + ' o importalo in un’altra app');
+}
+function plainDownload(name, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ---------- pagina pubblica di prenotazione ---------- */
+function openPub(typeId) {
+  const t = typeById(typeId) || S.types.find(x => x.active);
+  if (!t) { toast('Attiva almeno un tipo di slot'); return; }
+  const nf = nextFree(t);
+  ui.pub = { typeId: t.id, month: nf ? nf.k : todayK(), date: nf ? nf.k : null, time: null, step: 'pick', last: null, error: '' };
+  ui.pubReturn = ui.view === 'embed' ? 'embed' : 'slots'; ui.view = 'pub'; window.scrollTo(0, 0); render();
+}
+function renderPub() {
+  const P = ui.pub, t = typeById(P.typeId), owner = S.settings.owner;
+  const active = S.types.filter(x => x.active);
+  const banner = `<div class="pub-banner"><span>Anteprima della pagina che vede chi prenota. Le prenotazioni fatte qui finiscono davvero nel tuo calendario.</span><button data-act="closepub">Torna al calendario</button></div>
+    <header class="pub-top"><span class="logo">calendario.ch${I.star}</span><span class="who">${esc(pubLink(t))}</span></header>`;
+  if (P.step === 'done') {
+    const b = P.last, d = parse(b.date), pend = b.status === 'pending';
+    $('#pub').innerHTML = banner + `<div class="done"><div class="done-card" role="status">
+      <span class="lbl">${pend ? 'Richiesta inviata' : 'Prenotazione confermata'}</span>
+      <div style="display:flex;align-items:flex-end;gap:16px"><span class="bignum oro" style="font-size:112px;line-height:92px">${d.getDate()}</span>
+        <div><div class="h1" style="margin:0">${cap(GIORNI[d.getDay()])}, ${MESI[d.getMonth()]}</div><div class="sub">${fmtT(b.start)}–${fmtT(b.end)} · ${esc(t.name)}</div></div></div>
+      <p style="margin:0;font-size:15px;line-height:22px">${pend ? `${esc(owner)} deve ancora confermare. Riceverai un’e-mail a <b>${esc(b.email)}</b> appena l’incontro è confermato.` : `Ci vediamo ${t.place === 'sede' ? 'in sede' : t.place === 'video' ? 'in videochiamata' : 'al telefono'}. Il riepilogo${t.place === 'video' ? ' con il link' : ''} arriva a <b>${esc(b.email)}</b>.`}</p>
+      <dl class="kv"><dt>Con</dt><dd>${esc(owner)}</dd><dt>Nome</dt><dd>${esc(b.name)}</dd><dt>Luogo</dt><dd>${PLACE[t.place]}</dd>${b.note ? `<dt>Nota</dt><dd>${esc(b.note)}</dd>` : ''}</dl>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--ink);padding-top:16px">
+        <button class="btn dark" data-act="pub-ics">${I.down}Aggiungi al calendario</button><button class="btn line" data-act="pub-again">Prenota un altro orario</button></div>
+    </div></div>`;
+    return;
+  }
+  const typesHTML = active.map(x => `<label><input type="radio" name="ptype" value="${x.id}"${x.id === t.id ? ' checked' : ''} data-act="pub-type"><span><b>${esc(x.name)}</b><small>${x.duration} min · ${PLACE[x.place]}</small></span></label>`).join('');
+  // calendario del mese
+  const mb = parse(P.month), f = new Date(mb.getFullYear(), mb.getMonth(), 1), st = startOfWeek(f), tk = todayK();
+  const minMonth = key(new Date(parse(tk).getFullYear(), parse(tk).getMonth(), 1)), maxK = addK(tk, t.horizon);
+  const canPrev = key(f) > minMonth, canNext = key(new Date(f.getFullYear(), f.getMonth() + 1, 1)) <= maxK;
+  let cells = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(d => `<span class="dn" aria-hidden="true">${d}</span>`).join('');
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(st, i), k = key(d);
+    if (d.getMonth() !== f.getMonth()) { cells += '<span></span>'; continue; }
+    const n = freeSlots(k, t).length;
+    cells += `<button data-act="pub-day" data-k="${k}"${n ? '' : ' disabled'}${k === tk ? ' class="today"' : ''} aria-pressed="${k === P.date}" aria-label="${longDate(k)}, ${n ? (n === 1 ? '1 orario libero' : n + ' orari liberi') : 'nessun orario libero'}">${d.getDate()}${n ? '<i></i>' : ''}</button>`;
+  }
+  // orari
+  let right;
+  if (!P.date || !freeSlots(P.date, t).length && !P.time) {
+    const nf = nextFree(t);
+    right = `<div class="cal-card"><span class="lbl">Orari</span><p class="empty">${nf ? 'Scegli un giorno con il segno rosso.' : 'Al momento non ci sono orari liberi. Riprova più avanti.'}</p></div>`;
+  } else {
+    const d = parse(P.date), fs = freeSlots(P.date, t);
+    const times = fs.map(s => `<button class="time-btn" data-act="pub-time" data-s="${s.start}" aria-pressed="${P.time === s.start}">${fmtT(s.start)}</button>`).join('');
+    const form = P.time != null ? `<form id="pf" novalidate style="display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--ink);padding-top:14px">
+        <p style="margin:0"><b>${esc(t.name)}</b>, ${GIORNI[d.getDay()]} ${d.getDate()} ${MESI[d.getMonth()]} alle ${fmtT(P.time)}</p>
+        <label class="field">Nome e cognome<input type="text" name="name" placeholder="Come ti chiami?" autocomplete="name" maxlength="80"></label>
+        <label class="field">E-mail<input type="email" name="email" placeholder="nome@esempio.ch" autocomplete="email" maxlength="120"></label>
+        <label class="field">Nota per l’incontro<textarea name="note" rows="2" placeholder="Facoltativa" maxlength="1000"></textarea></label>
+        <label class="check"><input type="checkbox" name="remind" checked>Ricordamelo il giorno prima</label>
+        <button type="submit" class="btn red big">${t.confirm === 'manual' ? 'Invia la richiesta' : 'Prenota'}</button>
+        ${t.confirm === 'manual' ? `<p class="note" style="margin:0">${esc(owner)} conferma a mano le richieste per questo tipo di incontro.</p>` : ''}
+      </form>` : '';
+    right = `<div class="cal-card" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:flex-end;gap:12px"><span class="bignum oro" style="font-size:88px;line-height:72px">${d.getDate()}</span><div><span class="lbl">${GIORNI[d.getDay()]}</span><div style="font-weight:600">${MESI[d.getMonth()]} ${d.getFullYear()}</div></div></div>
+      ${P.error ? `<div class="alert" role="alert">${I.alert}<span>${esc(P.error)}</span></div>` : ''}
+      ${fs.length ? `<div class="times" role="group" aria-label="Orari liberi">${times}</div>` : '<p class="note" style="margin:0">Non ci sono più orari liberi in questo giorno.</p>'}
+      ${form}</div>`;
+  }
+  $('#pub').innerHTML = banner + `<div class="pub-body">
+    <div class="pub-col pub-info">
+      <div class="host"><span class="avatar">${esc(initials(owner))}</span><div><span class="lbl" style="color:var(--muted)">Prenota con</span><div style="font-size:20px;font-weight:700;letter-spacing:-.02em">${esc(owner)}</div></div></div>
+      ${t.desc ? `<p style="margin:0;color:var(--muted)">${esc(t.desc)}</p>` : ''}
+      <fieldset style="border:0;padding:0;margin:0"><legend class="lbl" style="margin-bottom:8px">Tipo di incontro</legend><div class="typepick">${typesHTML}</div></fieldset>
+      <p class="note" style="margin:0">Orari in ora svizzera (Europe/Zurich).</p>
+    </div>
+    <div class="cal-card"><div class="cal-head"><h2>${MESI[f.getMonth()]} ${f.getFullYear()}</h2>
+      <button class="round" data-act="pub-prev" aria-label="Mese precedente"${canPrev ? '' : ' disabled style="opacity:.35;cursor:default"'}>${I.prev}</button>
+      <button class="round" data-act="pub-next" aria-label="Mese successivo"${canNext ? '' : ' disabled style="opacity:.35;cursor:default"'}>${I.next}</button></div>
+      <div class="cal-grid">${cells}</div></div>
+    ${right}</div>`;
+  const pf = $('#pf');
+  if (pf) {
+    pf.addEventListener('submit', ev => {
+      ev.preventDefault(); clearErr(pf);
+      const v = Object.fromEntries(new FormData(pf)); let ok = true;
+      if (!v.name.trim()) { fieldErr(pf, 'name', 'Scrivi il tuo nome.'); ok = false; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) { fieldErr(pf, 'email', 'Controlla l’indirizzo e-mail, per esempio nome@esempio.ch.'); ok = false; }
+      if (!ok) { pf.querySelector('[aria-invalid]').focus(); return; }
+      if (!freeSlots(P.date, t).some(x => x.start === P.time)) { P.time = null; P.error = 'Questo orario è appena stato prenotato. Scegline un altro, quelli vicini sono ancora liberi.'; renderPub(); return; }
+      const b = { id: uid(), typeId: t.id, date: P.date, start: P.time, end: P.time + t.duration, name: v.name.trim(), email: v.email.trim(), note: v.note.trim(), status: t.confirm === 'manual' ? 'pending' : 'confirmed', created: new Date().toISOString() };
+      S.bookings.push(b); save(); P.last = b; P.step = 'done'; P.error = ''; window.scrollTo(0, 0); renderPub();
+    });
+    if (P.focusForm) { P.focusForm = false; pf.elements.name.focus(); }
+  }
+}
+
+
+/* ---------- incorpora ---------- */
+const FORMATI = [['link', 'Link', 'Un collegamento alla pagina di prenotazione.'], ['popup', 'Pulsante con finestra', 'Il modulo si apre sopra il sito, senza lasciarlo.'], ['inline', 'Modulo nella pagina', 'Il modulo vive direttamente nel contenuto.'], ['pagine', 'Blocco pagine.ch', 'Si aggiunge dal builder, senza codice.']];
+function openEmbed(id) {
+  const t = typeById(id) || S.types.find(x => x.active) || S.types[0];
+  if (!t) { toast('Crea prima un tipo di slot'); return; }
+  const prev = ui.embed || {};
+  ui.embed = { typeId: t.id, format: prev.format || 'inline', tema: prev.tema || 'natale', variante: prev.variante || 'compatta', label: prev.label || 'Prenota un appuntamento', device: 'desktop', pop: false };
+  ui.view = 'embed'; ui.search = ''; $('#q').value = ''; render(); window.scrollTo({ top: 0 });
+}
+function embSeg(k, opts) { const e = ui.embed; return `<div class="seg" role="group">${opts.map(([v, l]) => `<button type="button" data-act="emb-set" data-k="${k}" data-v="${v}" aria-pressed="${e[k] === v}">${l}</button>`).join('')}</div>`; }
+const embTypeSelect = t => `<select data-emb="typeId">${S.types.map(x => `<option value="${x.id}"${x.id === t.id ? ' selected' : ''}>${esc(x.name)} · ${x.duration} min${x.active ? '' : ' (in pausa)'}</option>`).join('')}</select>`;
+function embedHTML() {
+  const e = ui.embed, t = typeById(e.typeId);
+  if (!t) return '<p class="empty">Questo tipo di slot non esiste più.</p>';
+  return `<div class="emb">
+    <section class="panel emb-cfg" aria-label="Impostazioni">
+      <button type="button" class="btn ghost" style="align-self:flex-start;height:32px;padding:0;color:var(--ink)" data-act="view" data-v="slots">${I.prev}Slot condivisi</button>
+      <div><span class="lbl" style="color:var(--muted)">Incorpora</span><h1 class="h1" style="margin:2px 0 0">Prenotazioni su altri siti</h1></div>
+      <label class="field">Tipo di slot${embTypeSelect(t)}</label>
+      ${t.active ? '' : '<p class="note" style="margin:0">Questo tipo di slot è in pausa: chi visita la pagina non vede orari liberi.</p>'}
+      <fieldset class="emb-fmt"><legend class="lbl">Formato</legend>${FORMATI.map(([v, l, d], i) => `<button type="button" class="fmt" data-act="emb-set" data-k="format" data-v="${v}" aria-pressed="${e.format === v}"><span class="n">${pad(i + 1)}</span><span><b>${l}</b><small>${d}</small></span></button>`).join('')}</fieldset>
+      <div class="field"${e.format === 'link' ? ' hidden' : ''}>Tema${embSeg('tema', [['natale', 'Natale'], ['neutro', 'Neutro']])}</div>
+      <div class="field"${e.format === 'link' ? ' hidden' : ''}>Variante${embSeg('variante', [['compatta', 'Compatta'], ['completa', 'Completa']])}</div>
+      <label class="field"${e.format === 'link' || e.format === 'popup' ? '' : ' hidden'}>Testo del ${e.format === 'link' ? 'link' : 'pulsante'}<input type="text" data-emb="label" value="${esc(e.label)}" maxlength="40"></label>
+      <div class="field">Anteprima${embSeg('device', [['desktop', 'Desktop'], ['mobile', 'Telefono']])}</div>
+    </section>
+    <div class="emb-right"><div class="emb-prev" id="emb-prev"></div><section class="panel" id="emb-code"></section></div></div>`;
+}
+function embedParts() {
+  const e = ui.embed, t = typeById(e.typeId), prev = $('#emb-prev'), code = $('#emb-code');
+  if (!t || !prev) return;
+  const mob = e.device === 'mobile';
+  prev.className = 'emb-prev' + (mob ? ' mob' : '');
+  const cap1 = e.format === 'pagine' ? (mob ? 'Pagina pubblicata con pagine.ch, su telefono' : 'Builder di pagine.ch') : (mob ? 'Sito di esempio, su telefono' : 'Sito di esempio');
+  prev.innerHTML = `<div class="emb-cap">Anteprima · ${cap1}</div>` + (e.format === 'pagine' && !mob ? builderHTML(t) : hostHTML(t, false));
+  if (e.format === 'inline' || e.format === 'pagine') { wgInit('wg-prev', t.id); wgRender('wg-prev'); }
+  if (e.format === 'popup' && e.pop) { wgInit('wg-pop', t.id); wgRender('wg-pop'); }
+  code.innerHTML = codeHTML(t);
+}
+function hostHTML(t, edit) {
+  const e = ui.embed, lab = esc(e.label || 'Prenota');
+  let block = '';
+  if (e.format === 'link') block = `<p>Preferisci scegliere tu l’orario? <a href="#" data-act="emb-link" class="host-a">${lab}</a></p>`;
+  if (e.format === 'popup') block = `<button type="button" class="host-btn ${e.tema}" data-act="emb-pop-open">${lab}</button>`;
+  const split = e.format === 'inline' || e.format === 'pagine';
+  const wg = edit ? `<div class="bld-sel"><span class="bld-tag">Prenotazioni · calendario.ch</span><div id="wg-prev"></div></div>` : '<div id="wg-prev"></div>';
+  return `<div class="site"><div class="host-nav"><b>Studio Riva</b><span>Servizi</span><span>Chi siamo</span><span>Contatti</span></div>
+    <div class="host-main${split ? ' host-split' : ''}"><div class="host-text"><small>Consulenze a Mendrisio e online</small><h3>Parliamo del tuo progetto</h3><p>Ogni incarico parte da una conversazione. Raccontaci cosa hai in mente: in mezz’ora capiamo insieme se e come possiamo aiutarti.</p>${block}</div>${split ? wg : ''}</div>
+    ${e.format === 'popup' && e.pop ? `<div class="host-ov" data-act="emb-pop-bg"><div class="host-pop" role="dialog" aria-label="Prenotazione"><button class="icon-btn host-x" data-act="emb-pop-close" aria-label="Chiudi">${I.close}</button><div id="wg-pop"></div></div></div>` : ''}</div>`;
+}
+const BLD_IC = {
+  Titolo: '<path d="M5 6h14M12 6v13"/>', Testo: '<path d="M5 7h14M5 12h14M5 17h9"/>', Immagine: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 16l5-5 4 4 3-3 4 4"/>',
+  Galleria: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  Modulo: '<rect x="4" y="5" width="16" height="4" rx="1.5"/><rect x="4" y="12" width="16" height="4" rx="1.5"/><path d="M4 20h7"/>', Mappa: '<path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>',
+  Prenotazioni: '<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4M9 15l2 2 4-4"/>'
+};
+function builderHTML(t) {
+  const items = Object.keys(BLD_IC).map(n => `<div class="bld-item${n === 'Prenotazioni' ? ' on' : ''}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BLD_IC[n]}</svg>${n}</div>`).join('');
+  return `<div class="bld"><div class="bld-top"><b>pagine.ch</b><span class="bld-page">Studio Riva / Home</span><span class="bld-sp"></span><span class="bld-b">Anteprima</span><span class="bld-b dark">Pubblica</span></div>
+    <div class="bld-body"><aside class="bld-blocks"><span class="lbl">Blocchi</span>${items}</aside>
+    <div class="bld-canvas">${hostHTML(t, true)}</div>
+    <aside class="bld-insp"><div><span class="lbl" style="color:var(--muted)">Blocco selezionato</span><div style="font-size:17px;font-weight:700;letter-spacing:-.01em">Prenotazioni</div></div>
+      <div class="bld-acc"><span class="avatar">${esc(initials(S.settings.owner))}</span><div><b>calendario.ch/${esc(S.settings.handle)}</b><small>Account collegato</small></div></div>
+      <label class="field">Tipo di slot${embTypeSelect(t)}</label>
+      <div class="field">Tema${embSeg('tema', [['natale', 'Natale'], ['neutro', 'Neutro']])}</div>
+      <div class="field">Variante${embSeg('variante', [['compatta', 'Compatta'], ['completa', 'Completa']])}</div>
+      <p class="note" style="margin:0;font-size:12px">Gli orari arrivano da calendario.ch e le prenotazioni tornano lì. Se cambi la disponibilità, il blocco si aggiorna da solo.</p></aside></div></div>`;
+}
+function codeHTML(t) {
+  const e = ui.embed, path = (S.settings.handle || 'io') + '/' + t.slug, url = 'https://calendario.ch/' + path, lab = e.label || 'Prenota';
+  if (e.format === 'pagine') return `<h2 class="lbl" style="margin:0">Come aggiungerlo</h2><ol class="emb-steps"><li>In pagine.ch apri la pagina e scegli <b>Aggiungi blocco</b>.</li><li>Seleziona <b>Prenotazioni</b>. La prima volta ti chiede di collegare il tuo account calendario.ch.</li><li>Scegli il tipo di slot <b>${esc(t.name)}</b>, il tema e la variante, poi pubblica.</li></ol><p class="note" style="margin:0">Nessun codice da copiare.</p>`;
+  const h = x => String(x).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let code;
+  if (e.format === 'link') code = `<a href="${url}" target="_blank" rel="noopener">${h(lab)}</a>`;
+  if (e.format === 'popup') code = `<script src="https://calendario.ch/incorpora.js" async><\/script>\n<button type="button" data-calendario="${path}" data-modo="finestra" data-tema="${e.tema}" data-variante="${e.variante}">${h(lab)}</button>`;
+  if (e.format === 'inline') code = `<div data-calendario="${path}" data-modo="pagina" data-tema="${e.tema}" data-variante="${e.variante}"></div>\n<script src="https://calendario.ch/incorpora.js" async><\/script>`;
+  ui.embedCode = code;
+  const note = e.format === 'link' ? 'Funziona ovunque: su un sito, in una firma e-mail o in un post.'
+    : `Incollalo nel punto della pagina dove vuoi il ${e.format === 'popup' ? 'pulsante' : 'modulo'}. Se nella stessa pagina metti più moduli, basta una sola riga di script. Il codice sarà attivo quando calendario.ch sarà online con il servizio di prenotazione pubblico.`;
+  return `<div style="display:flex;align-items:center;gap:12px"><h2 class="lbl" style="flex:1;margin:0">Codice da incollare</h2><button class="btn dark" data-act="emb-copy">${I.link}Copia</button></div><pre class="code"><code>${esc(code)}</code></pre><p class="note" style="margin:0">${note}</p>`;
+}
+
+/* modulo di prenotazione riutilizzabile */
+const WG = {};
+function wgDays(t, n) { const out = [], tk = todayK(); for (let i = 0; i <= t.horizon && out.length < n; i++) { const k = addK(tk, i); if (freeSlots(k, t).length) out.push(k); } return out; }
+function wgInit(id, typeId) { const e = ui.embed, t = typeById(typeId); const days = wgDays(t, e.variante === 'completa' ? 14 : 7); WG[id] = { typeId, tema: e.tema, variante: e.variante, date: days[0] || null, time: null, step: 'pick', last: null, error: '' }; }
+function wgRender(id) {
+  const st = WG[id], el = document.getElementById(id); if (!st || !el) return;
+  const t = typeById(st.typeId); if (!t) { el.innerHTML = ''; return; }
+  const owner = S.settings.owner, full = st.variante === 'completa';
+  const head = `<div class="wg-head"><span class="wg-av">${esc(initials(owner))}</span><div><b>${esc(t.name)}</b><small>${esc(owner)} · ${t.duration} min · ${PLACE[t.place]}</small></div></div>`;
+  const foot = `<div class="wg-foot">Prenotazioni con calendario.ch ${I.star}</div>`;
+  let body;
+  if (st.step === 'done') {
+    const b = st.last, d = parse(b.date), pend = b.status === 'pending';
+    body = `<div class="wg-done" role="status"><span class="wg-lbl">${pend ? 'Richiesta inviata' : 'Prenotato'}</span>
+      <div style="display:flex;align-items:flex-end;gap:12px"><span class="wg-num${st.tema === 'natale' ? ' oro' : ''}">${d.getDate()}</span><div><b>${cap(GIORNI[d.getDay()])}, ${MESI[d.getMonth()]}</b><div class="wg-mut">${fmtT(b.start)}–${fmtT(b.end)}</div></div></div>
+      <p>${pend ? esc(owner) + ' conferma a breve. Ti scriviamo a <b>' + esc(b.email) + '</b>.' : 'Il riepilogo arriva a <b>' + esc(b.email) + '</b>.'}</p>
+      <button type="button" class="wg-sec" data-act="wg-again" data-wg="${id}">Prenota un altro orario</button></div>`;
+  } else {
+    const days = wgDays(t, full ? 14 : 7);
+    if (!days.length) body = `<p class="wg-mut" style="margin:0">Al momento non ci sono orari liberi. Riprova più avanti.</p>`;
+    else {
+      if (!days.includes(st.date)) { st.date = days[0]; st.time = null; }
+      const fs = freeSlots(st.date, t), d = parse(st.date);
+      body = `${full && t.desc ? `<p class="wg-mut" style="margin:0">${esc(t.desc)}</p>` : ''}
+        <div class="wg-lbl">Giorno</div>
+        <div class="wg-days" role="group" aria-label="Giorni con orari liberi">${days.map(k => { const x = parse(k); return `<button type="button" data-act="wg-day" data-wg="${id}" data-k="${k}" aria-pressed="${k === st.date}" aria-label="${longDate(k)}"><span>${GB[x.getDay()]}</span><b>${x.getDate()}</b></button>`; }).join('')}</div>
+        <div class="wg-lbl">Orari · ${GIORNI[d.getDay()]} ${d.getDate()} ${MESI[d.getMonth()]}</div>
+        ${st.error ? `<div class="alert" role="alert" style="padding:10px 12px">${I.alert}<span>${esc(st.error)}</span></div>` : ''}
+        <div class="wg-times" role="group" aria-label="Orari liberi">${fs.map(x => `<button type="button" data-act="wg-time" data-wg="${id}" data-s="${x.start}" aria-pressed="${st.time === x.start}">${fmtT(x.start)}</button>`).join('')}</div>
+        ${st.time != null ? `<form class="wg-form" id="${id}-f" novalidate>
+          <label class="field">Nome e cognome<input type="text" name="name" autocomplete="name" maxlength="80"></label>
+          <label class="field">E-mail<input type="email" name="email" autocomplete="email" maxlength="120"></label>
+          ${full ? '<label class="field">Nota per l’incontro<textarea name="note" rows="2" maxlength="1000" placeholder="Facoltativa"></textarea></label>' : ''}
+          <button type="submit" class="wg-submit">${t.confirm === 'manual' ? 'Invia la richiesta' : 'Prenota alle ' + fmtT(st.time)}</button></form>` : ''}`;
+    }
+  }
+  el.innerHTML = `<div class="wg ${st.tema}">${head}${body}${foot}</div>`;
+  const f = document.getElementById(id + '-f');
+  if (!f) return;
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); clearErr(f);
+    const v = Object.fromEntries(new FormData(f)); let ok = true;
+    if (!v.name.trim()) { fieldErr(f, 'name', 'Scrivi il tuo nome.'); ok = false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) { fieldErr(f, 'email', 'Controlla l’indirizzo e-mail.'); ok = false; }
+    if (!ok) { f.querySelector('[aria-invalid]').focus(); return; }
+    if (!freeSlots(st.date, t).some(x => x.start === st.time)) { st.time = null; st.error = 'Questo orario è appena stato prenotato. Scegline un altro.'; wgRender(id); return; }
+    const b = { id: uid(), typeId: t.id, date: st.date, start: st.time, end: st.time + t.duration, name: v.name.trim(), email: v.email.trim(), note: (v.note || '').trim(), status: t.confirm === 'manual' ? 'pending' : 'confirmed', created: new Date().toISOString() };
+    S.bookings.push(b); save(); st.last = b; st.step = 'done'; st.error = ''; wgRender(id);
+    toast('Prenotazione di prova registrata nel calendario');
+  });
+  if (st.focus) { st.focus = false; f.elements.name.focus(); }
+}
+
+/* ---------- toast e annulla ---------- */
+const snapshot = () => JSON.stringify(S);
+function restore(s) { S = JSON.parse(s); save(); render(); toast('Ripristinato'); }
+function toast(msg, undo) {
+  const box = $('#toast'); box.innerHTML = '';
+  const el = document.createElement('div'); el.className = 'toast';
+  el.innerHTML = `<i class="sq"></i><span>${esc(msg)}</span>${undo ? '<button>Annulla</button>' : ''}`;
+  if (undo) el.querySelector('button').addEventListener('click', () => { el.remove(); undo(); });
+  box.appendChild(el);
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.remove(), undo ? 7000 : 3500);
+}
+function copy(text) { copyText(text, 'Link copiato'); }
+function copyText(text, okMsg) {
+  const done = () => toast(okMsg);
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, () => fallback());
+  else fallback();
+  function fallback() { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Copia non riuscita'); } ta.remove(); }
+}
+
+/* ---------- navigazione ---------- */
+function step(dir) {
+  const c = parse(ui.cursor);
+  if (ui.view === 'week') ui.cursor = key(addDays(c, (isMobile() ? 3 : 7) * dir));
+  else if (ui.view === 'day') ui.cursor = key(addDays(c, dir));
+  else if (ui.view === 'month') ui.cursor = key(new Date(c.getFullYear(), c.getMonth() + dir, 1));
+  else if (ui.view === 'agenda') ui.cursor = key(addDays(c, 7 * dir));
+  ui.mini = null; render();
+}
+function setView(v) { ui.view = v; ui.search = ''; $('#q').value = ''; ui.mini = null; render(); window.scrollTo({ top: 0 }); }
+
+/* ---------- eventi globali ---------- */
+let suppressClick = false;
+document.addEventListener('click', ev => {
+  if (suppressClick) { suppressClick = false; ev.preventDefault(); ev.stopPropagation(); return; }
+  if (ev.target.matches('[data-overlay]')) { closeModal(); return; }
+  const a = ev.target.closest('[data-act]'); if (!a) return;
+  const act = a.dataset.act, id = a.dataset.id, k = a.dataset.k;
+  switch (act) {
+    case 'view': ev.preventDefault(); setView(a.dataset.v); break;
+    case 'prev': step(-1); break;
+    case 'next': step(1); break;
+    case 'today': ui.cursor = todayK(); ui.mini = null; ui.gridScroll = null; render(); break;
+    case 'mini-prev': case 'mini-next': { const b = ui.mini ? parse(ui.mini) : parse(ui.cursor); ui.mini = key(new Date(b.getFullYear(), b.getMonth() + (act === 'mini-next' ? 1 : -1), 1)); renderSide(); $('[data-act="' + act + '"]')?.focus(); break; }
+    case 'mini-go': ui.cursor = k; ui.mini = null; if (ui.view === 'slots') ui.view = 'day'; render(); break;
+    case 'goday': ui.cursor = k; ui.view = 'day'; ui.search = ''; $('#q').value = ''; render(); window.scrollTo({ top: 0 }); break;
+    case 'new': openEvent(null, null, { date: k || (ui.view === 'month' || ui.view === 'agenda' ? (ui.cursor < todayK() || ui.view === 'agenda' ? todayK() : ui.cursor) : ui.cursor), start: roundNow(), end: roundNow() + 60 }); break;
+    case 'newat': {
+      const r = a.getBoundingClientRect(); const m = S.settings.startHour * 60 + Math.floor(((ev.clientY - r.top) / HH * 60) / 30) * 30;
+      openEvent(null, null, { date: k, start: m, end: Math.min(m + 60, 24 * 60 - 5) }); break;
+    }
+    case 'newday': if (isMobile()) { ui.cursor = k; ui.view = 'day'; render(); } else openEvent(null, null, { date: k, start: 540, end: 600 }); break;
+    case 'openev': { const e = S.events.find(x => x.id === id); if (e) { if (a.dataset.jump) { ui.cursor = k; } openEvent(e, k || e.date); } break; }
+    case 'openbk': { const b = S.bookings.find(x => x.id === id); if (b) openBooking(b); break; }
+    case 'freeslot': openFreeSlot(typeById(a.dataset.t), k, +a.dataset.s); break;
+    case 'confirmbk': { const b = S.bookings.find(x => x.id === id); if (b) { b.status = 'confirmed'; save(); closeModal(); render(); toast('Prenotazione di ' + b.name + ' confermata'); } break; }
+    case 'cancelbk': { const b = S.bookings.find(x => x.id === id); if (!b) break; if (!a.dataset.sure) { a.dataset.sure = '1'; a.textContent = 'Sì, annulla la prenotazione'; break; } const snap = snapshot(); b.status = 'cancelled'; save(); closeModal(); render(); toast('Prenotazione annullata, l’orario torna libero', () => restore(snap)); break; }
+    case 'restorebk': { const b = S.bookings.find(x => x.id === id); if (!b) break; const clash = S.bookings.some(x => x !== b && x.status !== 'cancelled' && x.date === b.date && x.start < b.end && x.end > b.start); if (clash) { toast('L’orario è già stato preso da un’altra prenotazione'); break; } b.status = 'confirmed'; save(); closeModal(); render(); toast('Prenotazione ripristinata'); break; }
+    case 'icsbk': { const b = S.bookings.find(x => x.id === id); if (b) download('prenotazione-' + b.date + '.ics', bookingICS(b)); break; }
+    case 'toggleshow': { const t = typeById(id); t.showInCal = !t.showInCal; save(); render(); break; }
+    case 'toggleactive': { const t = typeById(id); t.active = !t.active; save(); render(); toast(t.name + (t.active ? ' è di nuovo prenotabile' : ' è in pausa')); break; }
+    case 'copylink': copy('https://' + pubLink(typeById(id))); break;
+    case 'edittype': openType(typeById(id)); break;
+    case 'newtype': openType(null); break;
+    case 'openpub': openPub(id); break;
+    case 'embed': openEmbed(id); break;
+    case 'emb-set': { ui.embed[a.dataset.k] = a.dataset.v; ui.embed.pop = false; renderMain(); $(`[data-act="emb-set"][data-k="${a.dataset.k}"][data-v="${a.dataset.v}"]`)?.focus(); break; }
+    case 'emb-pop-open': ui.embed.pop = true; embedParts(); $('#wg-pop button')?.focus(); break;
+    case 'emb-pop-close': ui.embed.pop = false; embedParts(); $('[data-act="emb-pop-open"]')?.focus(); break;
+    case 'emb-pop-bg': if (ev.target === a) { ui.embed.pop = false; embedParts(); } break;
+    case 'emb-copy': copyText(ui.embedCode || '', 'Codice copiato'); break;
+    case 'emb-link': ev.preventDefault(); openPub(ui.embed.typeId); break;
+    case 'wg-day': { const st = WG[a.dataset.wg]; if (!st) break; st.date = k; st.time = null; st.error = ''; wgRender(a.dataset.wg); $(`#${a.dataset.wg} [data-act="wg-day"][data-k="${k}"]`)?.focus(); break; }
+    case 'wg-time': { const st = WG[a.dataset.wg]; if (!st) break; st.time = +a.dataset.s; st.error = ''; st.focus = true; wgRender(a.dataset.wg); break; }
+    case 'wg-again': { const st = WG[a.dataset.wg]; if (!st) break; Object.assign(st, { step: 'pick', time: null, last: null, error: '' }); wgRender(a.dataset.wg); break; }
+    case 'bkfilter': ui.bkFilter = a.dataset.v; renderMain(); break;
+    case 'settings': openSettings(); break;
+    case 'clearsearch': ui.search = ''; $('#q').value = ''; render(); break;
+    case 'close': closeModal(); break;
+    case 'closepub': ui.view = ui.pubReturn || 'slots'; ui.pub = null; render(); break;
+    case 'pub-type': { ui.pub.typeId = a.value; const nf = nextFree(typeById(a.value)); ui.pub.date = nf ? nf.k : null; ui.pub.month = nf ? nf.k : todayK(); ui.pub.time = null; ui.pub.error = ''; renderPub(); $('#pub input[name=ptype]:checked')?.focus(); break; }
+    case 'pub-prev': case 'pub-next': { const b = parse(ui.pub.month); ui.pub.month = key(new Date(b.getFullYear(), b.getMonth() + (act === 'pub-next' ? 1 : -1), 1)); renderPub(); $('[data-act="' + act + '"]:not([disabled])')?.focus(); break; }
+    case 'pub-day': ui.pub.date = k; ui.pub.time = null; ui.pub.error = ''; renderPub(); $(`[data-act="pub-day"][data-k="${k}"]`)?.focus(); break;
+    case 'pub-time': ui.pub.time = +a.dataset.s; ui.pub.error = ''; ui.pub.focusForm = true; renderPub(); break;
+    case 'pub-ics': download('appuntamento.ics', bookingICS(ui.pub.last)); break;
+    case 'pub-again': { const t = typeById(ui.pub.typeId); const nf = nextFree(t); Object.assign(ui.pub, { step: 'pick', time: null, date: nf ? nf.k : null, month: nf ? nf.k : todayK(), last: null }); renderPub(); break; }
+  }
+});
+const roundNow = () => Math.min(Math.ceil((nowMin() + 1) / 30) * 30, 22 * 60);
+
+$('#q').addEventListener('input', e => { ui.search = e.target.value; render(); });
+$('#main').addEventListener('change', ev => {
+  const el = ev.target.closest('[data-emb]'); if (!el || ui.view !== 'embed') return;
+  ui.embed[el.dataset.emb] = el.value; ui.embed.pop = false;
+  if (el.dataset.emb === 'typeId') { renderSide(); renderMain(); } else if (el.dataset.emb !== 'label') embedParts();
+});
+$('#main').addEventListener('input', ev => {
+  const el = ev.target.closest('[data-emb="label"]'); if (!el || ui.view !== 'embed') return;
+  ui.embed.label = el.value; embedParts();
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape') { if ($('#modal').innerHTML) { closeModal(); return; } if (ui.view === 'embed' && ui.embed.pop) { ui.embed.pop = false; embedParts(); return; } if (ui.search) { ui.search = ''; $('#q').value = ''; $('#q').blur(); render(); return; } }
+  if ($('#modal').innerHTML) {
+    if (ev.key === 'Tab') { const f = $$('#modal button,#modal input,#modal select,#modal textarea,#modal a[href]').filter(x => !x.disabled && x.offsetParent !== null); if (!f.length) return; const first = f[0], last = f[f.length - 1]; if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); } else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); } }
+    return;
+  }
+  if (ev.target.closest('input,textarea,select,[contenteditable]') || ev.metaKey || ev.ctrlKey || ev.altKey || ui.view === 'pub') return;
+  const map = { m: 'month', w: 'week', d: 'day', a: 'agenda', s: 'slots' };
+  const kk = ev.key.toLowerCase();
+  if (map[kk]) { setView(map[kk]); }
+  else if (kk === 'n') { ev.preventDefault(); openEvent(null, null, { date: ui.cursor, start: roundNow(), end: roundNow() + 60 }); }
+  else if (kk === 't') { ui.cursor = todayK(); ui.gridScroll = null; render(); }
+  else if (ev.key === 'ArrowLeft' && !ev.target.closest('.mini-grid,.cal-grid')) step(-1);
+  else if (ev.key === 'ArrowRight' && !ev.target.closest('.mini-grid,.cal-grid')) step(1);
+  else if (ev.key === '/') { ev.preventDefault(); $('#q').focus(); }
+});
+
+/* trascinamento degli impegni */
+let drag = null;
+document.addEventListener('pointerdown', ev => {
+  const el = ev.target.closest('.ev[data-drag]'); if (!el || ev.button !== 0) return;
+  const e = S.events.find(x => x.id === el.dataset.id); if (!e) return;
+  const cols = $$('#gscroll .g-col');
+  drag = { el, e, k: el.dataset.k, x: ev.clientX, y: ev.clientY, moved: false, dm: 0, dd: 0, cols, colIdx: cols.findIndex(c => c.contains(el)) };
+});
+document.addEventListener('pointermove', ev => {
+  if (!drag) return;
+  const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+  if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+  if (!drag.moved) { drag.moved = true; drag.el.classList.add('dragging'); try { drag.el.setPointerCapture(ev.pointerId); } catch (e) {} }
+  drag.dm = Math.round(dy / HH * 60 / 15) * 15;
+  const rec = drag.e.repeat !== 'none';
+  let target = drag.colIdx;
+  if (!rec) drag.cols.forEach((c, i) => { const r = c.getBoundingClientRect(); if (ev.clientX >= r.left && ev.clientX < r.right) target = i; });
+  drag.dd = target - drag.colIdx;
+  const w = drag.dd ? drag.cols[target].getBoundingClientRect().left - drag.cols[drag.colIdx].getBoundingClientRect().left : 0;
+  drag.el.style.transform = `translate(${w}px, ${drag.dm / 60 * HH}px)`;
+});
+document.addEventListener('pointerup', () => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (!d.moved) return;
+  suppressClick = true; setTimeout(() => { suppressClick = false; }, 0);
+  const dur = d.e.end - d.e.start;
+  let ns = Math.max(0, Math.min(24 * 60 - dur, d.e.start + d.dm));
+  if (ns === d.e.start && !d.dd) { render(); return; }
+  const snap = snapshot();
+  d.e.start = ns; d.e.end = ns + dur;
+  if (d.dd && d.e.repeat === 'none') d.e.date = addK(d.e.date, d.dd);
+  save(); render();
+  toast(d.e.repeat !== 'none' ? 'Orario spostato per tutta la serie: ' + fmtT(ns) : (d.e.title + ' spostato a ' + shortDate(d.e.date) + ', ' + fmtT(ns)), () => restore(snap));
+});
+document.addEventListener('pointercancel', () => { if (drag) { drag = null; render(); } });
+
+/* avvio */
+load();
+if (isMobile()) ui.view = 'day';
+buildSnow();
+render();
+cloudInit();
+mq.addEventListener('change', () => { buildSnow(); render(); });
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(buildSnow, 300); });
+setInterval(() => { if (!$('#modal').innerHTML && !drag && (ui.view === 'week' || ui.view === 'day')) { const s = $('#gscroll')?.scrollTop; renderMain(); if (s != null && $('#gscroll')) $('#gscroll').scrollTop = s; } }, 60000);
+})();
+</script>
+</body>
+</html>

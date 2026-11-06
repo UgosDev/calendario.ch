@@ -1,215 +1,677 @@
-import React, { useState, useMemo } from 'react';
-import { ViewMode, BookingRequest, CalendarEvent } from './types';
-import { PIETRO_PIROLA_PROFILE, INITIAL_BOOKINGS, INITIAL_EVENTS } from './mockData';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  ViewMode,
+  SovereignCalendarState,
+  CalendarEvent,
+  Booking,
+  SlotType,
+  UssoUser,
+  VaultSyncStatus
+} from './types';
+import { getInitialSovereignState } from './services/calendarSeed';
+import { initUsso, getUser } from './services/ussoAuth';
+import { syncStateToVault, fetchVaultQuota } from './services/vaultService';
+import { initCrossSatelliteBridge } from './services/taccuinoBridge';
+import {
+  keyFromDate,
+  addDaysToKey,
+  formatLongDate,
+  formatShortDate,
+  formatMinutesToClock
+} from './services/swissHolidays';
+
+// Componenti
 import { Navbar } from './components/Navbar';
-import { HeroSection } from './components/HeroSection';
-import { BookingWidget } from './components/BookingWidget';
-import { BentoFeatures } from './components/BentoFeatures';
-import { LandingShowcase } from './components/LandingShowcase';
-import { DashboardView } from './components/DashboardView';
-import { PrivateCalendarView } from './components/PrivateCalendarView';
-import { EmbedModal } from './components/EmbedModal';
-import { Footer } from './components/Footer';
-import { ArrowLeft, Share2, ShieldCheck, Sparkles, Lock, Calendar as CalendarIcon } from 'lucide-react';
+import { Sidebar } from './components/Sidebar';
+import { WeekView } from './components/WeekView';
+import { DayView } from './components/DayView';
+import { MonthView } from './components/MonthView';
+import { AgendaView } from './components/AgendaView';
+import { SlotsView } from './components/SlotsView';
+import { EmbedView } from './components/EmbedView';
+import { PublicBookingView } from './components/PublicBookingView';
+import { EventModal } from './components/EventModal';
+import { BookingModal } from './components/BookingModal';
+import { SlotTypeModal } from './components/SlotTypeModal';
+import { UssoAccountModal } from './components/UssoAccountModal';
+
+// Icone
+import {
+  Calendar as CalIcon,
+  Clock,
+  Plus,
+  Grid,
+  CheckCircle,
+  CalendarDays,
+  List,
+  Layers,
+  Sparkles
+} from 'lucide-react';
+
+const LOCAL_STORAGE_KEY = 'calendario.ch.sovereign.v2';
 
 export default function App() {
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    // Check URL parameters or pathname for embed mode and views
-    const path = window.location.pathname.toLowerCase();
-    const params = new URLSearchParams(window.location.search);
-    if (path.includes('/calendar') || params.get('view') === 'calendar') return 'calendar';
-    if (path.includes('/embed') || params.get('embed') === 'true') return 'embed';
-    if (path.includes('/dashboard') || params.get('view') === 'dashboard') return 'dashboard';
-    if (path.length > 1 && !path.endsWith('index.html') || params.get('view') === 'booking') return 'booking';
-    return 'landing';
+  // ── 1. Inizializzazione Stato Sovrano da localStorage o Seed ──
+  const [calendarState, setCalendarState] = useState<SovereignCalendarState>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.v) return parsed;
+      }
+    } catch (e) {
+      console.warn('[Calendario] Fallback seed data:', e);
+    }
+    return getInitialSovereignState();
   });
 
-  const [bookings, setBookings] = useState<BookingRequest[]>(INITIAL_BOOKINGS);
-  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
-  const [showEmbedModal, setShowEmbedModal] = useState(false);
+  // ── 2. Stato Autenticazione USSO ──
+  const [user, setUser] = useState<UssoUser | null>(() => getUser());
 
-  // Derive blocked slots from private & confirmed events that have blocksBooking = true
-  const blockedSlots = useMemo(() => {
-    return events
-      .filter((e) => e.blocksBooking)
-      .map((e) => ({ date: e.date, time: e.startTime }));
-  }, [events]);
+  // ── 3. Stato Caveau Archivio.ch ──
+  const [syncStatus, setSyncStatus] = useState<VaultSyncStatus>({
+    state: 'idle',
+    quotaUsedBytes: 154200,
+    quotaTotalBytes: 1073741824
+  });
 
-  const handleBookingCreated = (newBooking: BookingRequest) => {
-    setBookings((prev) => [newBooking, ...prev]);
+  // ── 4. Stato Navigazione & Cursore Temporale ──
+  const [cursorDate, setCursorDate] = useState<string>(() => keyFromDate(new Date()));
+  const [currentView, setCurrentView] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('view') === 'pub' || p.get('embed') === '1') return 'pub';
+      if (p.get('view') === 'slots') return 'slots';
+      if (p.get('view') === 'embed') return 'embed';
+    }
+    return 'week';
+  });
 
-    // Automatically create a client event in the private calendar
-    const [h, m] = newBooking.timeSlot.split(':').map(Number);
-    const duration = newBooking.durationMinutes || 45;
-    const endMinutes = h * 60 + m + duration;
-    const endH = String(Math.floor(endMinutes / 60)).padStart(2, '0');
-    const endM = String(endMinutes % 60).padStart(2, '0');
+  const [searchQuery, setSearchQuery] = useState('');
 
-    const clientEvent: CalendarEvent = {
-      id: `evt-${newBooking.id}`,
-      title: `${newBooking.serviceName} · ${newBooking.clientName}`,
-      description: newBooking.clientNotes || `Prenotazione online per ${newBooking.clientName}`,
-      date: newBooking.date,
-      startTime: newBooking.timeSlot,
-      endTime: `${endH}:${endM}`,
-      category: 'client',
-      location:
-        newBooking.meetingLocation === 'office'
-          ? 'Sede MT Financial Bioggio (Via Lugano 1A)'
-          : newBooking.meetingLocation === 'video'
-          ? 'Videoconferenza protetta'
-          : 'A Domicilio Cliente',
-      meetUrl: newBooking.meetingLocation === 'video' ? `https://meet.calendario.ch/${newBooking.id}` : undefined,
-      isPrivate: false,
-      blocksBooking: true,
-      bookingId: newBooking.id,
-      clientName: newBooking.clientName,
-      clientEmail: newBooking.clientEmail,
-      clientPhone: newBooking.clientPhone,
-      createdAt: newBooking.createdAt,
+  // ── 5. Stato Modali ──
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [modalInitialDate, setModalInitialDate] = useState<string | undefined>();
+  const [modalInitialStart, setModalInitialStart] = useState<number | undefined>();
+
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [editingSlotType, setEditingSlotType] = useState<SlotType | null>(null);
+  const [isSlotTypeModalOpen, setIsSlotTypeModalOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+
+  const [embedSlotId, setEmbedSlotId] = useState<string | undefined>();
+  const [publicSlotId, setPublicSlotId] = useState<string | undefined>();
+
+  // ── 6. Notifiche Toast con Undo ──
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [undoAction, setUndoAction] = useState<(() => void) | null>(null);
+  const toastTimeoutRef = useRef<any>(null);
+
+  const showToast = (msg: string, undo?: () => void) => {
+    setToastMessage(msg);
+    setUndoAction(undo ? () => undo : null);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage(null);
+      setUndoAction(null);
+    }, undo ? 7000 : 3500);
+  };
+
+  // ── 7. Salvataggio in LocalStorage & Sincronizzazione con Archivio.ch ──
+  const saveState = (newState: SovereignCalendarState, actionLabel?: string) => {
+    const prevStateSnapshot = JSON.stringify(calendarState);
+    setCalendarState(newState);
+
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newState));
+    } catch (e) {
+      console.warn('[LocalStorage] Errore salvataggio:', e);
+    }
+
+    // Sincronizza nel caveau di Archivio.ch
+    setSyncStatus((prev) => ({ ...prev, state: 'syncing' }));
+    syncStateToVault(newState, user).then((res) => {
+      setSyncStatus((prev) => ({
+        ...prev,
+        state: res.success ? 'synced' : 'error',
+        lastSyncedAt: res.syncedAt,
+        sha256Hash: res.hash
+      }));
+    });
+
+    if (actionLabel) {
+      showToast(actionLabel, () => {
+        const restored = JSON.parse(prevStateSnapshot);
+        setCalendarState(restored);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(restored));
+        syncStateToVault(restored, user);
+        showToast('Azione annullata con successo');
+      });
+    }
+  };
+
+  // ── 8. Lifecycle USSO & Cross-Satellite taccuino.ch ──
+  useEffect(() => {
+    const cleanupUsso = initUsso(
+      (authUsr) => {
+        setUser(authUsr);
+        if (authUsr && authUsr.name) {
+          setCalendarState((prev) => ({
+            ...prev,
+            settings: {
+              ...prev.settings,
+              owner: authUsr.name || prev.settings.owner,
+              handle: authUsr.nickname?.toLowerCase() || prev.settings.handle
+            }
+          }));
+        }
+      },
+      () => {
+        setUser(null);
+      }
+    );
+
+    const cleanupBridge = initCrossSatelliteBridge((refId, noteId) => {
+      showToast('Nota d\'incontro collegata da taccuino.ch');
+    });
+
+    fetchVaultQuota().then((q) => {
+      setSyncStatus((prev) => ({
+        ...prev,
+        quotaUsedBytes: q.usedBytes,
+        quotaTotalBytes: q.totalBytes
+      }));
+    });
+
+    return () => {
+      cleanupUsso();
+      cleanupBridge();
     };
+  }, []);
 
-    setEvents((prev) => [clientEvent, ...prev]);
+  // ── 9. Gestione Eventi e Modali ──
+  const handleSaveEvent = (saved: CalendarEvent) => {
+    const exists = calendarState.events.some((e) => e.id === saved.id);
+    const updatedEvents = exists
+      ? calendarState.events.map((e) => (e.id === saved.id ? saved : e))
+      : [saved, ...calendarState.events];
+
+    saveState(
+      { ...calendarState, events: updatedEvents },
+      exists ? 'Impegno aggiornato' : 'Nuovo impegno creato'
+    );
   };
 
-  const handleAddEvent = (newEvent: CalendarEvent) => {
-    setEvents((prev) => [newEvent, ...prev]);
+  const handleDeleteEvent = (id: string, deleteSeries = false, exceptionDate?: string) => {
+    let updatedEvents = [...calendarState.events];
+    if (exceptionDate) {
+      updatedEvents = updatedEvents.map((e) =>
+        e.id === id ? { ...e, exdates: [...(e.exdates || []), exceptionDate] } : e
+      );
+    } else {
+      updatedEvents = updatedEvents.filter((e) => e.id !== id);
+    }
+
+    saveState(
+      { ...calendarState, events: updatedEvents },
+      deleteSeries ? 'Serie eliminata' : 'Impegno rimosso'
+    );
   };
 
-  const handleUpdateEvent = (updated: CalendarEvent) => {
-    setEvents((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+  const handleUpdateEventTime = (
+    eventId: string,
+    newStart: number,
+    newEnd: number,
+    newDate?: string
+  ) => {
+    const updatedEvents = calendarState.events.map((e) =>
+      e.id === eventId
+        ? {
+            ...e,
+            start: newStart,
+            end: newEnd,
+            date: newDate || e.date
+          }
+        : e
+    );
+    saveState({ ...calendarState, events: updatedEvents }, 'Orario aggiornato');
   };
 
-  const handleDeleteEvent = (id: string) => {
-    setEvents((prev) => prev.filter((e) => e.id !== id));
+  // ── 10. Gestione Prenotazioni ──
+  const handleConfirmBooking = (id: string) => {
+    const updatedBookings = calendarState.bookings.map((b) =>
+      b.id === id ? { ...b, status: 'confirmed' as const } : b
+    );
+    saveState({ ...calendarState, bookings: updatedBookings }, 'Prenotazione confermata');
   };
 
-  // Embed Mode (pure widget for iframe in pagine.ch)
-  if (viewMode === 'embed') {
+  const handleCancelBooking = (id: string) => {
+    const updatedBookings = calendarState.bookings.map((b) =>
+      b.id === id ? { ...b, status: 'cancelled' as const } : b
+    );
+    saveState(
+      { ...calendarState, bookings: updatedBookings },
+      'Prenotazione annullata. Lo slot è di nuovo libero'
+    );
+  };
+
+  const handleRestoreBooking = (id: string) => {
+    const updatedBookings = calendarState.bookings.map((b) =>
+      b.id === id ? { ...b, status: 'confirmed' as const } : b
+    );
+    saveState({ ...calendarState, bookings: updatedBookings }, 'Prenotazione ripristinata');
+  };
+
+  const handleBookingCreatedByClient = (newBooking: Booking) => {
+    const updatedBookings = [newBooking, ...calendarState.bookings];
+    saveState(
+      { ...calendarState, bookings: updatedBookings },
+      'Nuova prenotazione registrata nell\'agenda'
+    );
+  };
+
+  // ── 11. Gestione Tipi di Slot ──
+  const handleSaveSlotType = (saved: SlotType) => {
+    const exists = calendarState.types.some((t) => t.id === saved.id);
+    const updatedTypes = exists
+      ? calendarState.types.map((t) => (t.id === saved.id ? saved : t))
+      : [...calendarState.types, saved];
+
+    saveState(
+      { ...calendarState, types: updatedTypes },
+      exists ? 'Tipo di slot aggiornato' : 'Nuovo tipo di slot creato'
+    );
+  };
+
+  const handleToggleSlotActive = (id: string) => {
+    const updatedTypes = calendarState.types.map((t) =>
+      t.id === id ? { ...t, active: !t.active } : t
+    );
+    const target = updatedTypes.find((t) => t.id === id);
+    saveState(
+      { ...calendarState, types: updatedTypes },
+      target?.active ? `${target.name} è ora prenotabile` : `${target?.name} messo in pausa`
+    );
+  };
+
+  // ── 12. Navigazione Cursore ──
+  const handleNavigatePeriod = (direction: number) => {
+    const stepDays = currentView === 'week' ? 7 : currentView === 'month' ? 30 : 1;
+    setCursorDate((prev) => addDaysToKey(prev, stepDays * direction));
+  };
+
+  const handleGoToToday = () => {
+    setCursorDate(keyFromDate(new Date()));
+  };
+
+  // ── 13. Ricerca Globale Filtrata ──
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return null;
+
+    const matchedEvents = calendarState.events.filter(
+      (e) =>
+        e.title.toLowerCase().includes(q) ||
+        (e.place && e.place.toLowerCase().includes(q)) ||
+        (e.note && e.note.toLowerCase().includes(q))
+    );
+
+    const matchedBookings = calendarState.bookings.filter(
+      (b) =>
+        b.name.toLowerCase().includes(q) ||
+        b.email.toLowerCase().includes(q) ||
+        (b.note && b.note.toLowerCase().includes(q))
+    );
+
+    return { matchedEvents, matchedBookings };
+  }, [searchQuery, calendarState]);
+
+  // Se la vista è 'pub' (pagina pubblica di prenotazione)
+  if (currentView === 'pub') {
+    const targetSlot =
+      calendarState.types.find((t) => t.id === publicSlotId) ||
+      calendarState.types.find((t) => t.active) ||
+      calendarState.types[0];
+
     return (
-      <div className="min-h-screen bg-black text-white p-2 sm:p-4 flex items-center justify-center">
-        <BookingWidget
-          profile={PIETRO_PIROLA_PROFILE}
-          isEmbed={true}
-          blockedSlots={blockedSlots}
-          onBookingCreated={handleBookingCreated}
+      <div className="min-h-screen bg-[#fbf8f1] p-4 flex flex-col justify-center">
+        <PublicBookingView
+          slotType={targetSlot}
+          ownerName={calendarState.settings.owner}
+          events={calendarState.events}
+          bookings={calendarState.bookings}
+          onBookingCreated={handleBookingCreatedByClient}
+          onClose={() => setCurrentView('slots')}
         />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-neutral-100 flex flex-col font-sans selection:bg-white selection:text-black">
-      {/* Header Navigation */}
+    <div className={`min-h-screen flex flex-col ${calendarState.settings.snow ? '' : 'no-snow'}`}>
+      {/* Neve Stagionale */}
+      {calendarState.settings.snow && (
+        <div className="neve" aria-hidden="true">
+          {Array.from({ length: 24 }).map((_, i) => (
+            <div
+              key={i}
+              className="fiocco"
+              style={{
+                left: `${(i * 4.2) % 100}%`,
+                animation: `cadere${i % 3} ${7 + (i % 6)}s linear infinite`,
+                animationDelay: `${(i * 0.45) % 5}s`
+              }}
+            >
+              <i style={{ width: `${4 + (i % 5)}px`, height: `${4 + (i % 5)}px` }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Barra di Navigazione Sovrana */}
       <Navbar
-        viewMode={viewMode}
-        onViewChange={setViewMode}
-        onOpenEmbedModal={() => setShowEmbedModal(true)}
+        currentView={currentView}
+        onSelectView={(v) => {
+          setSearchQuery('');
+          setCurrentView(v);
+        }}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onOpenNewEvent={() => {
+          setEditingEvent(null);
+          setModalInitialDate(cursorDate);
+          setModalInitialStart(540);
+          setIsEventModalOpen(true);
+        }}
+        onOpenAccountModal={() => setIsAccountModalOpen(true)}
+        user={user}
+        syncStatus={syncStatus}
+        snowEnabled={calendarState.settings.snow}
+        onToggleSnow={() =>
+          setCalendarState((prev) => ({
+            ...prev,
+            settings: { ...prev.settings, snow: !prev.settings.snow }
+          }))
+        }
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1">
-        {/* Landing Page */}
-        {viewMode === 'landing' && (
-          <>
-            <HeroSection
-              onViewChange={setViewMode}
-              onOpenEmbedModal={() => setShowEmbedModal(true)}
-            />
-
-            {/* Interactive Showcase (Personal & Family Life First, Swiss Civic, Pro optional) */}
-            <LandingShowcase
-              onViewChange={setViewMode}
-              blockedSlots={blockedSlots}
-              onBookingCreated={handleBookingCreated}
-            />
-
-            {/* Bento Grid Features */}
-            <BentoFeatures />
-          </>
-        )}
-
-        {/* Private Calendar View (Full personal scheduling app) */}
-        {viewMode === 'calendar' && (
-          <PrivateCalendarView
-            profile={PIETRO_PIROLA_PROFILE}
-            events={events}
-            bookings={bookings}
-            onAddEvent={handleAddEvent}
-            onUpdateEvent={handleUpdateEvent}
-            onDeleteEvent={handleDeleteEvent}
-            onOpenPublicBooking={() => setViewMode('booking')}
-            onOpenEmbedModal={() => setShowEmbedModal(true)}
+      {/* Corpo Principale dell'Applicazione */}
+      <div className="body flex-1">
+        {/* Sidebar Navigazione & Statistiche */}
+        {currentView !== 'embed' && (
+          <Sidebar
+            cursorDate={cursorDate}
+            onSelectDate={(k) => {
+              setCursorDate(k);
+              if (currentView === 'slots') setCurrentView('day');
+            }}
+            onNavigatePeriod={handleNavigatePeriod}
+            onGoToToday={handleGoToToday}
+            events={calendarState.events}
+            bookings={calendarState.bookings}
+            slotTypes={calendarState.types}
           />
         )}
 
-        {/* Dedicated Public Booking Page (pietro-pirola) */}
-        {viewMode === 'booking' && (
-          <div className="py-12 md:py-16 max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between">
-              <button
-                onClick={() => setViewMode('landing')}
-                className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 transition-colors font-medium"
-              >
-                <ArrowLeft size={14} />
-                <span>Torna alla panoramica</span>
-              </button>
-
-              <div className="flex items-center gap-3">
+        {/* Area Principale */}
+        <main className="main">
+          {/* Visualizzazione Risultati Ricerca Globale */}
+          {searchResults ? (
+            <div className="list-card">
+              <div className="section-h my-2">
+                <h2>Risultati per «{searchQuery}»</h2>
                 <button
-                  onClick={() => setViewMode('calendar')}
-                  className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 transition-colors font-medium"
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="btn line text-xs"
                 >
-                  <Lock size={12} className="text-amber-400" />
-                  <span>Apri la tua Agenda Privata</span>
-                </button>
-                <button
-                  onClick={() => setShowEmbedModal(true)}
-                  className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 transition-colors"
-                >
-                  <Share2 size={13} />
-                  <span>Incorpora questo calendario</span>
+                  Chiudi Ricerca
                 </button>
               </div>
-            </div>
 
-            <BookingWidget
-              profile={PIETRO_PIROLA_PROFILE}
-              blockedSlots={blockedSlots}
-              onBookingCreated={handleBookingCreated}
-            />
+              <div className="flex flex-col gap-2 mt-4">
+                {searchResults.matchedEvents.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => {
+                      setEditingEvent(e);
+                      setIsEventModalOpen(true);
+                    }}
+                    className="row-btn"
+                  >
+                    <span className="tm">{formatShortDate(e.date)}</span>
+                    <i className="sw bg-[#163a2a] w-2.5" />
+                    <span className="ttl">
+                      {e.title}
+                      {e.place && <small>{e.place}</small>}
+                    </span>
+                    <span className="tag ink">Impegno</span>
+                  </button>
+                ))}
 
-            <div className="max-w-4xl mx-auto mt-8 p-4 rounded-2xl border border-neutral-900 bg-neutral-950 text-xs text-neutral-500 text-center flex flex-col sm:flex-row items-center justify-between gap-2">
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck size={14} className="text-white" />
-                <span>Crittografia end-to-end · Dati residenti in Svizzera (nLPD)</span>
-              </span>
-              <span className="font-mono text-[11px]">calendario.ch/pietro-pirola</span>
+                {searchResults.matchedBookings.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setEditingBooking(b)}
+                    className="row-btn"
+                  >
+                    <span className="tm">{formatShortDate(b.date)}</span>
+                    <i className="sw bg-[#b3202a] w-2.5" />
+                    <span className="ttl">{b.name}</span>
+                    <span className="tag red">Prenotato</span>
+                  </button>
+                ))}
+
+                {searchResults.matchedEvents.length === 0 &&
+                  searchResults.matchedBookings.length === 0 && (
+                    <p className="empty text-center py-8">
+                      Nessun impegno o prenotazione corrispondente trovato.
+                    </p>
+                  )}
+              </div>
             </div>
+          ) : (
+            <>
+              {currentView === 'week' && (
+                <WeekView
+                  cursorDate={cursorDate}
+                  events={calendarState.events}
+                  bookings={calendarState.bookings}
+                  slotTypes={calendarState.types}
+                  startHour={calendarState.settings.startHour}
+                  endHour={calendarState.settings.endHour}
+                  onSelectEvent={(e) => {
+                    setEditingEvent(e);
+                    setIsEventModalOpen(true);
+                  }}
+                  onSelectBooking={setEditingBooking}
+                  onNewEventAt={(date, minutes) => {
+                    setEditingEvent(null);
+                    setModalInitialDate(date);
+                    setModalInitialStart(minutes);
+                    setIsEventModalOpen(true);
+                  }}
+                  onUpdateEventTime={handleUpdateEventTime}
+                />
+              )}
+
+              {currentView === 'day' && (
+                <DayView
+                  cursorDate={cursorDate}
+                  events={calendarState.events}
+                  bookings={calendarState.bookings}
+                  slotTypes={calendarState.types}
+                  startHour={calendarState.settings.startHour}
+                  endHour={calendarState.settings.endHour}
+                  onSelectEvent={(e) => {
+                    setEditingEvent(e);
+                    setIsEventModalOpen(true);
+                  }}
+                  onSelectBooking={setEditingBooking}
+                  onNewEventAt={(date, minutes) => {
+                    setEditingEvent(null);
+                    setModalInitialDate(date);
+                    setModalInitialStart(minutes);
+                    setIsEventModalOpen(true);
+                  }}
+                />
+              )}
+
+              {currentView === 'month' && (
+                <MonthView
+                  cursorDate={cursorDate}
+                  events={calendarState.events}
+                  bookings={calendarState.bookings}
+                  slotTypes={calendarState.types}
+                  onSelectDate={(k) => {
+                    setCursorDate(k);
+                    setCurrentView('day');
+                  }}
+                  onSelectEvent={(e) => {
+                    setEditingEvent(e);
+                    setIsEventModalOpen(true);
+                  }}
+                  onSelectBooking={setEditingBooking}
+                  onNewEventOnDate={(k) => {
+                    setEditingEvent(null);
+                    setModalInitialDate(k);
+                    setModalInitialStart(540);
+                    setIsEventModalOpen(true);
+                  }}
+                />
+              )}
+
+              {currentView === 'agenda' && (
+                <AgendaView
+                  cursorDate={cursorDate}
+                  events={calendarState.events}
+                  bookings={calendarState.bookings}
+                  slotTypes={calendarState.types}
+                  onSelectEvent={(e) => {
+                    setEditingEvent(e);
+                    setIsEventModalOpen(true);
+                  }}
+                  onSelectBooking={setEditingBooking}
+                />
+              )}
+
+              {currentView === 'slots' && (
+                <SlotsView
+                  slotTypes={calendarState.types}
+                  bookings={calendarState.bookings}
+                  events={calendarState.events}
+                  user={user}
+                  handle={calendarState.settings.handle}
+                  onNewSlotType={() => {
+                    setEditingSlotType(null);
+                    setIsSlotTypeModalOpen(true);
+                  }}
+                  onEditSlotType={(t) => {
+                    setEditingSlotType(t);
+                    setIsSlotTypeModalOpen(true);
+                  }}
+                  onToggleSlotActive={handleToggleSlotActive}
+                  onOpenEmbed={(id) => {
+                    setEmbedSlotId(id);
+                    setCurrentView('embed');
+                  }}
+                  onOpenPublicPage={(id) => {
+                    setPublicSlotId(id);
+                    setCurrentView('pub');
+                  }}
+                  onSelectBooking={setEditingBooking}
+                  onConfirmBooking={handleConfirmBooking}
+                  onToast={showToast}
+                />
+              )}
+
+              {currentView === 'embed' && (
+                <EmbedView
+                  slotTypes={calendarState.types}
+                  initialSlotId={embedSlotId}
+                  handle={calendarState.settings.handle}
+                  ownerName={calendarState.settings.owner}
+                  onBackToSlots={() => setCurrentView('slots')}
+                  onToast={showToast}
+                />
+              )}
+            </>
+          )}
+        </main>
+      </div>
+
+      {/* Modale Creazione / Modifica Impegno */}
+      {isEventModalOpen && (
+        <EventModal
+          event={editingEvent}
+          initialDate={modalInitialDate}
+          initialStartMinutes={modalInitialStart}
+          onSave={handleSaveEvent}
+          onDelete={handleDeleteEvent}
+          onClose={() => {
+            setIsEventModalOpen(false);
+            setEditingEvent(null);
+          }}
+        />
+      )}
+
+      {/* Modale Dettagli Prenotazione */}
+      {editingBooking && (
+        <BookingModal
+          booking={editingBooking}
+          slotType={calendarState.types.find((t) => t.id === editingBooking.typeId)}
+          onConfirm={handleConfirmBooking}
+          onCancel={handleCancelBooking}
+          onRestore={handleRestoreBooking}
+          onClose={() => setEditingBooking(null)}
+        />
+      )}
+
+      {/* Modale Gestione Tipo di Slot */}
+      {isSlotTypeModalOpen && (
+        <SlotTypeModal
+          slotType={editingSlotType}
+          onSave={handleSaveSlotType}
+          onClose={() => {
+            setIsSlotTypeModalOpen(false);
+            setEditingSlotType(null);
+          }}
+        />
+      )}
+
+      {/* Modale Account USSO & Archivio.ch */}
+      {isAccountModalOpen && (
+        <UssoAccountModal
+          user={user}
+          syncStatus={syncStatus}
+          onClose={() => setIsAccountModalOpen(false)}
+          onForceSync={() => saveState(calendarState, 'Sincronizzazione forzata completata')}
+        />
+      )}
+
+      {/* Notifiche Toast con Undo */}
+      {toastMessage && (
+        <div id="toast">
+          <div className="toast">
+            <span>{toastMessage}</span>
+            {undoAction && (
+              <button
+                type="button"
+                onClick={() => {
+                  undoAction();
+                  setToastMessage(null);
+                  setUndoAction(null);
+                }}
+              >
+                Annulla
+              </button>
+            )}
           </div>
-        )}
-
-        {/* Professional Dashboard View */}
-        {viewMode === 'dashboard' && (
-          <DashboardView
-            profile={PIETRO_PIROLA_PROFILE}
-            bookings={bookings}
-            onOpenBooking={() => setViewMode('booking')}
-            onOpenEmbedModal={() => setShowEmbedModal(true)}
-            onOpenCalendar={() => setViewMode('calendar')}
-          />
-        )}
-      </main>
-
-      {/* Footer */}
-      <Footer />
-
-      {/* Embed Code Modal */}
-      <EmbedModal
-        isOpen={showEmbedModal}
-        onClose={() => setShowEmbedModal(false)}
-        handle={PIETRO_PIROLA_PROFILE.handle}
-      />
+        </div>
+      )}
     </div>
   );
 }
