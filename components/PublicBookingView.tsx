@@ -134,7 +134,7 @@ export const PublicBookingView: React.FC<Props> = ({
     const d = parseKey(confirmedBooking.date);
 
     return (
-      <div className="max-w-xl mx-auto my-8 p-6 bg-[var(--cream)] border-1.5 border-[var(--edge)] rounded-2xl shadow-xl flex flex-col gap-6 text-center">
+      <div className={`max-w-xl mx-auto ${isEmbed ? 'my-2 p-4' : 'my-8 p-6'} bg-[var(--cream)] border-1.5 border-[var(--edge)] rounded-2xl shadow-xl flex flex-col gap-6 text-center`}>
         <div className="w-14 h-14 rounded-full bg-[var(--ink)] text-white flex items-center justify-center mx-auto shadow-md">
           <CheckCircle size={32} className="text-[var(--gold)]" />
         </div>
@@ -199,7 +199,7 @@ export const PublicBookingView: React.FC<Props> = ({
 
   // ── Schermata di Selezione e Form ──
   return (
-    <div className={`max-w-2xl mx-auto ${isEmbed ? 'p-3' : 'p-6 my-6'} bg-[var(--cream)] border-1.5 border-[var(--edge)] rounded-2xl shadow-xl flex flex-col gap-6`}>
+    <div className={`max-w-2xl mx-auto ${isEmbed ? 'p-3 sm:p-5 my-0 w-full' : 'p-6 my-6'} bg-[var(--cream)] border-1.5 border-[var(--edge)] rounded-2xl shadow-xl flex flex-col gap-6`}>
       {/* Intestazione */}
       <div className="flex items-start justify-between border-b border-[var(--edge)] pb-4">
         <div>

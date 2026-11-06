@@ -82,7 +82,10 @@ export default function App() {
   const [currentView, setCurrentView] = useState<ViewMode>(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search);
-      if (p.get('view') === 'pub' || p.get('embed') === '1') return 'pub';
+      const pathSegments = window.location.pathname.replace(/^\/|\/$/g, '').split('/').filter(Boolean);
+      const hasPathRoute = pathSegments.length > 0 && !pathSegments[0].includes('.') && pathSegments[0] !== 'index.html';
+
+      if (p.get('view') === 'pub' || p.get('embed') === '1' || p.get('embed') === 'true' || hasPathRoute) return 'pub';
       if (p.get('view') === 'slots') return 'slots';
       if (p.get('view') === 'embed') return 'embed';
     }
@@ -103,7 +106,17 @@ export default function App() {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   const [embedSlotId, setEmbedSlotId] = useState<string | undefined>();
-  const [publicSlotId, setPublicSlotId] = useState<string | undefined>();
+  const [publicSlotId, setPublicSlotId] = useState<string | undefined>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('slot')) return p.get('slot')!;
+      const path = p.get('path');
+      if (path && path.includes('/')) return path.split('/')[1];
+      const pathSegments = window.location.pathname.replace(/^\/|\/$/g, '').split('/').filter(Boolean);
+      if (pathSegments.length > 1 && !pathSegments[1].includes('.')) return pathSegments[1];
+    }
+    return undefined;
+  });
 
   // ── 6. Notifiche Toast con Undo ──
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -155,6 +168,38 @@ export default function App() {
 
   // ── 8. Lifecycle USSO & Cross-Satellite taccuino.ch ──
   useEffect(() => {
+    // Sincronizza parametri URL se presenti (es. embed da pagine.ch o accesso diretto)
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      const pathSegments = window.location.pathname.replace(/^\/|\/$/g, '').split('/').filter(Boolean);
+      const pathHandle = pathSegments.length > 0 && !pathSegments[0].includes('.') && pathSegments[0] !== 'index.html' ? pathSegments[0] : null;
+      const pathSlot = pathSegments.length > 1 ? pathSegments[1] : null;
+
+      const handleParam = p.get('handle') || pathHandle;
+      const slotParam = p.get('slot') || pathSlot || (p.get('path')?.includes('/') ? p.get('path')!.split('/')[1] : p.get('path'));
+      const ownerParam = p.get('owner');
+      const temaParam = p.get('tema');
+
+      if (temaParam) {
+        document.documentElement.dataset.theme = temaParam;
+      }
+
+      if (slotParam) {
+        setPublicSlotId(slotParam);
+      }
+
+      if (handleParam || ownerParam) {
+        setCalendarState((prev) => ({
+          ...prev,
+          settings: {
+            ...prev.settings,
+            handle: handleParam || prev.settings.handle,
+            owner: ownerParam || (handleParam ? handleParam.charAt(0).toUpperCase() + handleParam.slice(1) : prev.settings.owner)
+          }
+        }));
+      }
+    }
+
     const cleanupUsso = initUsso(
       (authUsr) => {
         setUser(authUsr);
@@ -364,20 +409,38 @@ export default function App() {
 
   // Se la vista è 'pub' (pagina pubblica di prenotazione)
   if (currentView === 'pub') {
+    const isEmbed = typeof window !== 'undefined' && (
+      new URLSearchParams(window.location.search).get('embed') === '1' ||
+      new URLSearchParams(window.location.search).get('embed') === 'true'
+    );
+
     const targetSlot =
-      calendarState.types.find((t) => t.id === publicSlotId) ||
+      calendarState.types.find((t) => t.id === publicSlotId || t.slug === publicSlotId) ||
       calendarState.types.find((t) => t.active) ||
       calendarState.types[0];
 
     return (
-      <div className="min-h-screen bg-[var(--cream)] p-4 flex flex-col justify-center">
+      <div className={isEmbed ? 'p-1 sm:p-2 bg-transparent flex flex-col justify-center' : 'min-h-screen bg-[var(--cream)] p-4 flex flex-col justify-center'}>
         <PublicBookingView
           slotType={targetSlot}
           ownerName={calendarState.settings.owner}
           events={calendarState.events}
           bookings={calendarState.bookings}
-          onBookingCreated={handleBookingCreatedByClient}
-          onClose={() => setCurrentView('slots')}
+          onBookingCreated={(newBk) => {
+            handleBookingCreatedByClient(newBk);
+            try {
+              if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                  type: 'calendario:booking-created',
+                  booking: newBk
+                }, '*');
+              }
+            } catch (err) {
+              console.warn('[calendario.ch] postMessage dispatch error:', err);
+            }
+          }}
+          onClose={isEmbed ? undefined : () => setCurrentView('slots')}
+          isEmbed={isEmbed}
         />
       </div>
     );
