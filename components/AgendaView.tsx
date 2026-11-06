@@ -114,7 +114,7 @@ export const AgendaView: React.FC<Props> = ({
             <small>
               {GIORNI_BREVI_IT[day.date.getDay()]} · {MESI_IT[day.date.getMonth()].slice(0, 3)}.
               {day.holiday && (
-                <span className="block text-[#b3202a] font-bold mt-0.5">
+                <span className="block text-[var(--accent)] font-bold mt-0.5">
                   {day.holiday}
                 </span>
               )}
@@ -143,7 +143,7 @@ export const AgendaView: React.FC<Props> = ({
                   <i
                     className="sw"
                     style={{
-                      background: it.kind === 'booking' ? '#b3202a' : '#163a2a',
+                      background: it.kind === 'booking' ? 'var(--accent)' : 'var(--ink)',
                       width: '10px'
                     }}
                   />

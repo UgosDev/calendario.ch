@@ -14,6 +14,7 @@ import { syncStateToVault, fetchVaultQuota } from './services/vaultService';
 import { initCrossSatelliteBridge } from './services/taccuinoBridge';
 import {
   keyFromDate,
+  parseKey,
   addDaysToKey,
   formatLongDate,
   formatShortDate,
@@ -22,6 +23,7 @@ import {
 
 // Componenti
 import { Navbar } from './components/Navbar';
+import { TEMA } from './config';
 import { Sidebar } from './components/Sidebar';
 import { WeekView } from './components/WeekView';
 import { DayView } from './components/DayView';
@@ -297,13 +299,46 @@ export default function App() {
 
   // ── 12. Navigazione Cursore ──
   const handleNavigatePeriod = (direction: number) => {
-    const stepDays = currentView === 'week' ? 7 : currentView === 'month' ? 30 : 1;
+    if (currentView === 'month') {
+      setCursorDate((prev) => {
+        const d = parseKey(prev);
+        return keyFromDate(new Date(d.getFullYear(), d.getMonth() + direction, 1));
+      });
+      return;
+    }
+    const stepDays = currentView === 'week' ? 7 : 1;
     setCursorDate((prev) => addDaysToKey(prev, stepDays * direction));
   };
 
   const handleGoToToday = () => {
     setCursorDate(keyFromDate(new Date()));
   };
+
+  // ── Scorciatoie da tastiera: frecce = periodo, T = oggi, M/W/D = vista, N = nuovo impegno ──
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (e.metaKey || e.ctrlKey || e.altKey || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || t.isContentEditable) return;
+      if (document.querySelector('[role="dialog"], .overlay') || document.body.classList.contains('b-dragging')) return;
+      if (!['week', 'day', 'month', 'agenda'].includes(currentView)) return;
+      const k = e.key.toLowerCase();
+      if (e.key === 'ArrowLeft') { e.preventDefault(); handleNavigatePeriod(-1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); handleNavigatePeriod(1); }
+      else if (k === 't') handleGoToToday();
+      else if (k === 'm') setCurrentView('month');
+      else if (k === 'w') setCurrentView('week');
+      else if (k === 'd') setCurrentView('day');
+      else if (k === 'n') {
+        e.preventDefault();
+        setEditingEvent(null);
+        setModalInitialDate(cursorDate);
+        setModalInitialStart(540);
+        setIsEventModalOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   // ── 13. Ricerca Globale Filtrata ──
   const searchResults = useMemo(() => {
@@ -335,7 +370,7 @@ export default function App() {
       calendarState.types[0];
 
     return (
-      <div className="min-h-screen bg-[#fbf8f1] p-4 flex flex-col justify-center">
+      <div className="min-h-screen bg-[var(--cream)] p-4 flex flex-col justify-center">
         <PublicBookingView
           slotType={targetSlot}
           ownerName={calendarState.settings.owner}
@@ -351,7 +386,7 @@ export default function App() {
   return (
     <div className={`min-h-screen flex flex-col ${calendarState.settings.snow ? '' : 'no-snow'}`}>
       {/* Neve Stagionale */}
-      {calendarState.settings.snow && (
+      {TEMA === 'natale' && calendarState.settings.snow && (
         <div className="neve" aria-hidden="true">
           {Array.from({ length: 24 }).map((_, i) => (
             <div
@@ -397,10 +432,13 @@ export default function App() {
       />
 
       {/* Corpo Principale dell'Applicazione */}
-      <div className="body flex-1">
+      <div className="b-body flex-1">
         {/* Sidebar Navigazione & Statistiche */}
         {currentView !== 'embed' && (
           <Sidebar
+            currentView={currentView}
+            onOpenSlots={() => setCurrentView('slots')}
+            onSelectBooking={setEditingBooking}
             cursorDate={cursorDate}
             onSelectDate={(k) => {
               setCursorDate(k);
@@ -415,7 +453,7 @@ export default function App() {
         )}
 
         {/* Area Principale */}
-        <main className="main">
+        <main className="b-main">
           {/* Visualizzazione Risultati Ricerca Globale */}
           {searchResults ? (
             <div className="list-card">
@@ -442,7 +480,7 @@ export default function App() {
                     className="row-btn"
                   >
                     <span className="tm">{formatShortDate(e.date)}</span>
-                    <i className="sw bg-[#163a2a] w-2.5" />
+                    <i className="sw bg-[var(--own-bg)] w-2.5" />
                     <span className="ttl">
                       {e.title}
                       {e.place && <small>{e.place}</small>}
@@ -459,7 +497,7 @@ export default function App() {
                     className="row-btn"
                   >
                     <span className="tm">{formatShortDate(b.date)}</span>
-                    <i className="sw bg-[#b3202a] w-2.5" />
+                    <i className="sw bg-[var(--accent)] w-2.5" />
                     <span className="ttl">{b.name}</span>
                     <span className="tag red">Prenotato</span>
                   </button>
@@ -495,11 +533,16 @@ export default function App() {
                     setIsEventModalOpen(true);
                   }}
                   onUpdateEventTime={handleUpdateEventTime}
+                  onSwipe={handleNavigatePeriod}
+                  onNotify={showToast}
                 />
               )}
 
               {currentView === 'day' && (
                 <DayView
+                  onUpdateEventTime={handleUpdateEventTime}
+                  onSwipe={handleNavigatePeriod}
+                  onNotify={showToast}
                   cursorDate={cursorDate}
                   events={calendarState.events}
                   bookings={calendarState.bookings}
@@ -522,6 +565,7 @@ export default function App() {
 
               {currentView === 'month' && (
                 <MonthView
+                  onSwipe={handleNavigatePeriod}
                   cursorDate={cursorDate}
                   events={calendarState.events}
                   bookings={calendarState.bookings}
@@ -615,6 +659,7 @@ export default function App() {
             setIsEventModalOpen(false);
             setEditingEvent(null);
           }}
+          onToast={showToast}
         />
       )}
 
@@ -627,6 +672,7 @@ export default function App() {
           onCancel={handleCancelBooking}
           onRestore={handleRestoreBooking}
           onClose={() => setEditingBooking(null)}
+          onToast={showToast}
         />
       )}
 

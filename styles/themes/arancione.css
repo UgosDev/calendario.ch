@@ -1,0 +1,18 @@
+/* Tema Arancione, stile A (accantonato): Inter Tight, inchiostro nero, accento arancione, linee nette. Si attiva in config.ts. */
+[data-theme="arancione"]{
+  --page:#ffffff; --ink:#111111; --ink-hover:#000000; --muted:#555555; --muted-bg:#f0efec;
+  --accent:#c2410c; --accent-hover:#9a3412; --accent-soft:#fdeee6; --focus-ring:#fbd9c6;
+  --cream:#ffffff; --paper:#faf9f7; --edge:#111111; --line:#e3e3e3; --grid:#ececec; --grid-half:#f4f4f4;
+  --weekend:#faf9f7; --today-bg:#faf9f7; --gold:#c2410c; --rule:#111111;
+  --off:#8a8a8a; --dis-bg:#ececec; --dis:#666666; --on-dark-muted:#cfcfcf;
+  --own-bg:#111111; --own-ink:#ffffff; --own-border:transparent;
+  --bk-bg:#c2410c; --bk-ink:#ffffff; --bk-border:transparent;
+  --shadow-rgb:17, 17, 17;
+  --font:'Inter Tight', system-ui, -apple-system, sans-serif;
+  --bw:1.5px; --r-card:18px; --r-ctl:10px; --r-btn:10px; --r-ev:8px;
+}
+
+/* niente stella, neve e oro fuori dal tema natalizio */
+[data-theme="arancione"] .logo-star{display:none}
+[data-theme="arancione"] .neve{display:none}
+[data-theme="arancione"] .oro{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:var(--accent)!important;animation:none}

@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { CalendarEvent, EventRepeat } from '../types';
 import { REPEAT_LABELS } from '../services/calendarEngine';
 import { formatMinutesToClock, parseClockToMinutes, formatShortDate } from '../services/swissHolidays';
-import { openMeetingNoteInTaccuino } from '../services/taccuinoBridge';
-import { X, Trash2, FileText, Check, Calendar } from 'lucide-react';
+import { TaccuinoCard } from './TaccuinoCard';
+import { X, Trash2, Check, Calendar } from 'lucide-react';
 
 interface Props {
   event: CalendarEvent | null;
@@ -13,6 +13,7 @@ interface Props {
   onSave: (event: CalendarEvent) => void;
   onDelete: (id: string, deleteSeries?: boolean, exceptionDate?: string) => void;
   onClose: () => void;
+  onToast?: (msg: string) => void;
 }
 
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -24,7 +25,8 @@ export const EventModal: React.FC<Props> = ({
   initialEndMinutes = 600,
   onSave,
   onDelete,
-  onClose
+  onClose,
+  onToast
 }) => {
   const isNew = !event;
   const [title, setTitle] = useState(event?.title || '');
@@ -86,23 +88,14 @@ export const EventModal: React.FC<Props> = ({
     onClose();
   };
 
-  const handleOpenTaccuino = () => {
-    openMeetingNoteInTaccuino({
-      id: event?.id || uid(),
-      title: title || 'Nuovo Incontro',
-      date,
-      startMinutes: allDay ? 540 : parseClockToMinutes(startClock),
-      endMinutes: allDay ? 600 : parseClockToMinutes(endClock),
-      location: place,
-      note
-    });
-  };
+  const currentStartMinutes = allDay ? 540 : parseClockToMinutes(startClock);
+  const currentEndMinutes = allDay ? 600 : parseClockToMinutes(endClock);
 
   return (
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="dialog" role="dialog" aria-labelledby="dlg-ev-title">
         <div className="dlg-head">
-          <h2 id="dlg-ev-title" className="text-xl font-bold text-[#163a2a]">
+          <h2 id="dlg-ev-title" className="text-xl font-bold text-[var(--ink)]">
             {isNew ? 'Nuovo Impegno' : 'Dettagli Impegno'}
           </h2>
           <button className="icon-btn ml-auto" onClick={onClose} aria-label="Chiudi">
@@ -111,7 +104,7 @@ export const EventModal: React.FC<Props> = ({
         </div>
 
         {error && (
-          <div className="p-2.5 rounded-lg bg-[#fbeeee] border border-[#b3202a] text-[#b3202a] text-xs font-semibold">
+          <div className="p-2.5 rounded-lg bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] text-xs font-semibold">
             {error}
           </div>
         )}
@@ -236,22 +229,19 @@ export const EventModal: React.FC<Props> = ({
             />
           </label>
 
-          {/* Integrazione Diretta taccuino.ch */}
-          <div className="p-3 bg-[#f4efe4] border border-[#163a2a] rounded-xl flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <FileText size={16} className="text-[#163a2a]" />
-              <span className="text-[#4f5a52]">
-                Prendi note o redigi il verbale d'incontro su <b>taccuino.ch</b>
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleOpenTaccuino}
-              className="btn line h-8 px-2.5 text-xs font-bold whitespace-nowrap hover:bg-[#163a2a] hover:text-white"
-            >
-              Apri su taccuino.ch ↗
-            </button>
-          </div>
+          {/* Integrazione Sovrana taccuino.ch (Bolla Fluttuante & Verbali) */}
+          <TaccuinoCard
+            item={{
+              id: event?.id || uid(),
+              title: title || 'Nuovo Appuntamento',
+              date,
+              startMinutes: currentStartMinutes,
+              endMinutes: currentEndMinutes,
+              location: place,
+              note
+            }}
+            onToast={onToast}
+          />
 
           <div className="dlg-foot">
             {!isNew && (
@@ -268,7 +258,7 @@ export const EventModal: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => onDelete(event.id, true)}
-                      className="btn ghost text-xs text-[#b3202a]"
+                      className="btn ghost text-xs text-[var(--accent)]"
                     >
                       Elimina la serie
                     </button>
@@ -277,7 +267,7 @@ export const EventModal: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => onDelete(event.id)}
-                    className="btn ghost text-[#b3202a]"
+                    className="btn ghost text-[var(--accent)]"
                   >
                     <Trash2 size={14} /> Elimina
                   </button>

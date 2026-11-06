@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Check,
   FileText,
+  StickyNote,
   Clock,
   MapPin,
   Calendar
@@ -108,7 +109,7 @@ export const SlotsView: React.FC<Props> = ({
               <article key={t.id} className={`type-card ${t.active ? '' : 'off'}`}>
                 <div className="head">
                   <div>
-                    <span className="lbl text-[#4f5a52]">{t.duration} minuti</span>
+                    <span className="lbl text-[var(--muted)]">{t.duration} minuti</span>
                     <h3>{t.name}</h3>
                   </div>
                   <button
@@ -121,7 +122,7 @@ export const SlotsView: React.FC<Props> = ({
                   />
                 </div>
 
-                {t.desc && <p className="text-xs text-[#4f5a52] m-0">{t.desc}</p>}
+                {t.desc && <p className="text-xs text-[var(--muted)] m-0">{t.desc}</p>}
 
                 <dl className="facts">
                   <dt>Giorni</dt>
@@ -145,16 +146,16 @@ export const SlotsView: React.FC<Props> = ({
                   {t.priceChf ? (
                     <>
                       <dt>Tariffa</dt>
-                      <dd className="font-bold text-[#163a2a]">
+                      <dd className="font-bold text-[var(--ink)]">
                         {formatChf(t.priceChf)}{' '}
-                        <span className="font-normal text-[#b08a3e]">
+                        <span className="font-normal text-[var(--gold)]">
                           ({formatUcoin(t.priceUcoin || 0)})
                         </span>
                       </dd>
                     </>
                   ) : null}
                   <dt>Prossimo</dt>
-                  <dd className="text-[#b3202a] font-semibold">
+                  <dd className="text-[var(--accent)] font-semibold">
                     {t.active
                       ? next
                         ? `${formatShortDate(next.date)} alle ${formatMinutesToClock(next.start)}`
@@ -169,7 +170,7 @@ export const SlotsView: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => copyPublicLink(t.slug)}
-                    className="icon-btn text-white bg-[#163a2a] hover:bg-[#0f2b1f] border-0"
+                    className="icon-btn text-white bg-[var(--ink)] hover:bg-[var(--ink-hover)] border-0"
                     title="Copia link"
                   >
                     <Copy size={14} />
@@ -242,7 +243,7 @@ export const SlotsView: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="border border-[#163a2a] rounded-xl overflow-hidden bg-[#fbf8f1]">
+        <div className="border border-[var(--edge)] rounded-xl overflow-hidden bg-[var(--cream)]">
           {filteredBookings.length > 0 ? (
             filteredBookings.map((b, idx) => {
               const slot = slotTypes.find((t) => t.id === b.typeId);
@@ -255,7 +256,7 @@ export const SlotsView: React.FC<Props> = ({
 
               return (
                 <div key={b.id} className="bk-row px-4">
-                  <span className="text-xs font-bold text-[#4f5a52]">
+                  <span className="text-xs font-bold text-[var(--muted)]">
                     {String(idx + 1).padStart(2, '0')}
                   </span>
                   <span className="avatar">{initials}</span>
@@ -289,25 +290,31 @@ export const SlotsView: React.FC<Props> = ({
                   </span>
 
                   <div className="acts flex items-center gap-2">
-                    {/* Tasto Note taccuino.ch */}
+                    {/* Tasto Note taccuino.ch con bolla fluttuante */}
                     <button
                       type="button"
                       onClick={() =>
-                        openMeetingNoteInTaccuino({
-                          id: b.id,
-                          title: `${slot?.name || 'Incontro'} · ${b.name}`,
-                          date: b.date,
-                          startMinutes: b.start,
-                          endMinutes: b.end,
-                          clientName: b.name,
-                          clientEmail: b.email,
-                          note: b.note
-                        })
+                        openMeetingNoteInTaccuino(
+                          {
+                            id: b.id,
+                            title: `${slot?.name || 'Incontro'} · ${b.name}`,
+                            date: b.date,
+                            startMinutes: b.start,
+                            endMinutes: b.end,
+                            clientName: b.name,
+                            clientEmail: b.email,
+                            note: b.note
+                          },
+                          {
+                            mode: 'bubble',
+                            onCopied: () => onToast?.(`Verbale per ${b.name} pronto: incollalo nella bolla fluttuante!`)
+                          }
+                        )
                       }
-                      className="btn line text-xs h-8 px-2.5"
-                      title="Apri o crea appunto su taccuino.ch"
+                      className="btn line text-xs h-8 px-2.5 rounded-full"
+                      title="Apri il verbale nella bolla fluttuante di taccuino.ch"
                     >
-                      <FileText size={13} /> Note
+                      <StickyNote size={13} /> Note
                     </button>
 
                     {b.status === 'pending' && (

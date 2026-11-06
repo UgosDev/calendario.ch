@@ -1,16 +1,16 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useSwipe } from './gestures';
 import { CalendarEvent, Booking, SlotType } from '../types';
 import {
   parseKey,
   keyFromDate,
   addDays,
   startOfWeek,
-  GIORNI_BREVI_IT,
-  formatMinutesToClock,
   getHoliday,
   formatLongDate
 } from '../services/swissHolidays';
 import { getEventsOn, getBookingsOn, calculateFreeSlots } from '../services/calendarEngine';
+import { clock } from './WeekView';
 
 interface Props {
   cursorDate: string; // YYYY-MM-DD
@@ -21,8 +21,12 @@ interface Props {
   onSelectEvent: (e: CalendarEvent) => void;
   onSelectBooking: (b: Booking) => void;
   onNewEventOnDate: (k: string) => void;
+  onSwipe?: (dir: number) => void;
 }
 
+const MAX_PILLS = 3;
+
+/** Vista mese della proposta "Mix B": celle a tessere arrotondate, impegni a pillola. */
 export const MonthView: React.FC<Props> = ({
   cursorDate,
   events,
@@ -31,171 +35,73 @@ export const MonthView: React.FC<Props> = ({
   onSelectDate,
   onSelectEvent,
   onSelectBooking,
-  onNewEventOnDate
+  onNewEventOnDate,
+  onSwipe
 }) => {
-  const currentMonthDate = parseKey(cursorDate);
-  const firstOfMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 1);
-  const startGrid = startOfWeek(firstOfMonth);
+  const boxRef = useRef<HTMLDivElement>(null);
+  useSwipe(boxRef, onSwipe);
+  const c = parseKey(cursorDate);
+  const first = new Date(c.getFullYear(), c.getMonth(), 1);
+  const start = startOfWeek(first);
   const todayKey = keyFromDate(new Date());
+  const weeks = addDays(start, 35).getMonth() === first.getMonth() ? 6 : 5;
 
-  // Calcolo se servono 5 o 6 settimane
-  const endCheck = addDays(startGrid, 35);
-  const totalWeeks = endCheck.getMonth() === firstOfMonth.getMonth() ? 6 : 5;
-
-  const cells: {
-    key: string;
-    date: Date;
-    isOut: boolean;
-    isWeekend: boolean;
-    isToday: boolean;
-    holiday?: string;
-  }[] = [];
-
-  for (let i = 0; i < totalWeeks * 7; i++) {
-    const d = addDays(startGrid, i);
+  const cells = Array.from({ length: weeks * 7 }, (_, i) => {
+    const d = addDays(start, i);
     const k = keyFromDate(d);
-    cells.push({
-      key: k,
-      date: d,
-      isOut: d.getMonth() !== firstOfMonth.getMonth(),
-      isWeekend: d.getDay() === 0 || d.getDay() === 6,
-      isToday: k === todayKey,
-      holiday: getHoliday(k)
-    });
-  }
-
-  const daysHeaders = GIORNI_BREVI_IT.slice(1).concat(GIORNI_BREVI_IT.slice(0, 1));
+    return { k, d, out: d.getMonth() !== first.getMonth(), we: i % 7 >= 5, today: k === todayKey, hol: getHoliday(k) };
+  });
 
   return (
-    <div className="card">
-      {/* Intestazione Giorni */}
-      <div className="m-head">
-        {daysHeaders.map((dh) => (
-          <span key={dh} className="lbl text-center text-[#4f5a52]">
-            {dh}
-          </span>
+    <div className="b-month" ref={boxRef}>
+      <div className="b-mgrid">
+        {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map((w) => (
+          <span key={w} className="b-mhead">{w}</span>
         ))}
-      </div>
-
-      {/* Matrice Mese */}
-      <div className="m-grid">
         {cells.map((cell) => {
-          const dayEvents = getEventsOn(events, cell.key);
-          const dayBookings = getBookingsOn(bookings, cell.key);
-
-          // Calcolo slot liberi totali
-          const totalFreeSlots = slotTypes
-            .filter((t) => t.active)
-            .reduce(
-              (sum, t) => sum + calculateFreeSlots(cell.key, t, events, bookings).length,
-              0
-            );
-
-          const itemsToShow = [
-            ...dayEvents.map((e) => ({
-              kind: 'event' as const,
-              id: e.id,
-              title: e.title,
-              start: e.start,
-              allDay: e.allDay,
-              raw: e
-            })),
-            ...dayBookings.map((b) => ({
-              kind: 'booking' as const,
-              id: b.id,
-              title: b.name,
-              start: b.start,
-              allDay: false,
-              status: b.status,
-              raw: b
-            }))
-          ].sort((a, b) => {
-            if (a.allDay && !b.allDay) return -1;
-            if (!a.allDay && b.allDay) return 1;
-            return a.start - b.start;
-          });
-
-          const shown = itemsToShow.slice(0, 3);
-          const remainingCount = itemsToShow.length - 3;
-
+          type Pill = { key: string; cls: string; label: string; onClick?: () => void };
+          const pills: Pill[] = [];
+          let free = 0;
+          if (!cell.out) {
+            const evs = getEventsOn(events, cell.k).sort((a, b) => (a.allDay ? -1 : a.start) - (b.allDay ? -1 : b.start));
+            const bks = getBookingsOn(bookings, cell.k);
+            const timed = [
+              ...evs.map((e) => ({ s: e.allDay ? -1 : e.start, p: { key: e.id, cls: 'k-own', label: e.allDay ? e.title : `${clock(e.start)} ${e.title}`, onClick: () => onSelectEvent(e) } })),
+              ...bks.map((b) => ({ s: b.start, p: { key: b.id, cls: b.status === 'pending' ? 'k-pending' : 'k-booked', label: `${clock(b.start)} ${b.name.split(' ').slice(-1)[0]}`, onClick: () => onSelectBooking(b) } }))
+            ].sort((a, b) => a.s - b.s);
+            timed.forEach((x) => pills.push(x.p));
+            free = slotTypes.filter((t) => t.active).reduce((s, t) => s + calculateFreeSlots(cell.k, t, events, bookings).length, 0);
+          }
+          const room = free ? MAX_PILLS - 1 : MAX_PILLS;
+          const shown = pills.slice(0, pills.length > room ? room - 1 : room);
+          const hidden = pills.length - shown.length;
           return (
             <div
-              key={cell.key}
+              key={cell.k}
+              className={`b-mcell${cell.out ? ' out' : ''}${cell.we ? ' we' : ''}${cell.today ? ' today' : ''}`}
               onClick={(e) => {
                 if ((e.target as HTMLElement).closest('button')) return;
-                onNewEventOnDate(cell.key);
+                if (!cell.out) onNewEventOnDate(cell.k);
               }}
-              className={`m-cell ${cell.isOut ? 'out' : ''} ${cell.isWeekend ? 'we' : ''} ${
-                cell.isToday ? 'today' : ''
-              }`}
             >
-              <div className="m-top">
-                <button
-                  type="button"
-                  onClick={() => onSelectDate(cell.key)}
-                  className="m-num"
-                  title={`Apri ${formatLongDate(cell.key)}`}
-                >
-                  {cell.date.getDate()}
+              <div className="b-mtop">
+                <button type="button" className="b-mnum" onClick={() => onSelectDate(cell.k)} aria-label={`Apri ${formatLongDate(cell.k)}`}>
+                  {cell.d.getDate()}
                 </button>
-                {cell.holiday && (
-                  <span className="m-hol" title={cell.holiday}>
-                    {cell.holiday}
-                  </span>
-                )}
+                {cell.hol && !cell.out && <span className="b-mhol">{cell.hol}</span>}
               </div>
-
-              {/* Elenco Impegni nel riquadro */}
-              <div className="m-items flex flex-col gap-1 my-1">
-                {shown.map((it) => {
-                  if (it.kind === 'event') {
-                    const e = it.raw as CalendarEvent;
-                    return (
-                      <button
-                        key={e.id}
-                        type="button"
-                        onClick={() => onSelectEvent(e)}
-                        className={`chip ${e.allDay ? 'own' : 'own-l'}`}
-                        title={e.title}
-                      >
-                        {!e.allDay && (
-                          <span className="tm">{formatMinutesToClock(e.start)}</span>
-                        )}
-                        <span>{e.title}</span>
-                      </button>
-                    );
-                  } else {
-                    const b = it.raw as Booking;
-                    return (
-                      <button
-                        key={b.id}
-                        type="button"
-                        onClick={() => onSelectBooking(b)}
-                        className={`chip ${b.status === 'pending' ? 'bk-l' : 'booked'}`}
-                        title={`Prenotazione: ${b.name}`}
-                      >
-                        <span className="tm">{formatMinutesToClock(b.start)}</span>
-                        <span>{b.name}</span>
-                      </button>
-                    );
-                  }
-                })}
-              </div>
-
-              {remainingCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => onSelectDate(cell.key)}
-                  className="m-more text-xs text-[#b3202a] font-bold"
-                >
-                  +{remainingCount} altri
+              {shown.map((p) => (
+                <button key={p.key} type="button" className={`b-pill ${p.cls}`} onClick={p.onClick} title={p.label}>
+                  {p.label}
+                </button>
+              ))}
+              {hidden > 0 && (
+                <button type="button" className="b-more-n" onClick={() => onSelectDate(cell.k)}>
+                  +{hidden} {hidden === 1 ? 'altro' : 'altri'}
                 </button>
               )}
-
-              {totalFreeSlots > 0 && (
-                <span className="m-free mt-auto">
-                  {totalFreeSlots} {totalFreeSlots === 1 ? 'slot libero' : 'slot liberi'}
-                </span>
+              {free > 0 && (
+                <span className="b-pill k-free">{free} {free === 1 ? 'slot libero' : 'slot liberi'}</span>
               )}
             </div>
           );

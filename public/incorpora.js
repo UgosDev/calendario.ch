@@ -15,7 +15,7 @@
     inlines.forEach((el) => {
       el.setAttribute('data-cal-inited', 'true');
       const path = el.getAttribute('data-calendario') || '';
-      const tema = el.getAttribute('data-tema') || 'natale';
+      const tema = el.getAttribute('data-tema') || 'standard';
       const variante = el.getAttribute('data-variante') || 'compatta';
 
       const iframe = document.createElement('iframe');
@@ -37,7 +37,7 @@
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         const path = btn.getAttribute('data-calendario') || '';
-        const tema = btn.getAttribute('data-tema') || 'natale';
+        const tema = btn.getAttribute('data-tema') || 'standard';
         const variante = btn.getAttribute('data-variante') || 'compatta';
 
         // Crea overlay modale

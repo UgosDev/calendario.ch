@@ -134,19 +134,19 @@ export const PublicBookingView: React.FC<Props> = ({
     const d = parseKey(confirmedBooking.date);
 
     return (
-      <div className="max-w-xl mx-auto my-8 p-6 bg-[#fbf8f1] border-1.5 border-[#163a2a] rounded-2xl shadow-xl flex flex-col gap-6 text-center">
-        <div className="w-14 h-14 rounded-full bg-[#163a2a] text-white flex items-center justify-center mx-auto shadow-md">
-          <CheckCircle size={32} className="text-[#b08a3e]" />
+      <div className="max-w-xl mx-auto my-8 p-6 bg-[var(--cream)] border-1.5 border-[var(--edge)] rounded-2xl shadow-xl flex flex-col gap-6 text-center">
+        <div className="w-14 h-14 rounded-full bg-[var(--ink)] text-white flex items-center justify-center mx-auto shadow-md">
+          <CheckCircle size={32} className="text-[var(--gold)]" />
         </div>
 
         <div>
-          <span className="lbl text-[#b3202a]">
+          <span className="lbl text-[var(--accent)]">
             {isPending ? 'Richiesta Inviata' : 'Prenotazione Confermata'}
           </span>
-          <h2 className="text-2xl font-bold text-[#163a2a] mt-1 mb-2">
+          <h2 className="text-2xl font-bold text-[var(--ink)] mt-1 mb-2">
             {slotType.name}
           </h2>
-          <p className="text-xs text-[#4f5a52] max-w-md mx-auto m-0">
+          <p className="text-xs text-[var(--muted)] max-w-md mx-auto m-0">
             {isPending
               ? `${ownerName} verificherà la tua richiesta e riceverai conferma all'indirizzo ${confirmedBooking.email}.`
               : `Il riepilogo e il promemoria sono stati inviati all'indirizzo ${confirmedBooking.email}.`}
@@ -154,15 +154,15 @@ export const PublicBookingView: React.FC<Props> = ({
         </div>
 
         {/* Box Data e Ora */}
-        <div className="p-4 rounded-xl bg-[#f4efe4] border border-[#163a2a] flex items-center justify-center gap-6">
-          <span className="bignum text-5xl leading-none text-[#b3202a]">
+        <div className="p-4 rounded-xl bg-[var(--paper)] border border-[var(--edge)] flex items-center justify-center gap-6">
+          <span className="bignum text-5xl leading-none text-[var(--accent)]">
             {d.getDate()}
           </span>
           <div className="text-left">
-            <b className="text-base text-[#163a2a] block">
+            <b className="text-base text-[var(--ink)] block">
               {capitalize(GIORNI_IT[d.getDay()])}, {MESI_IT[d.getMonth()]} {d.getFullYear()}
             </b>
-            <span className="text-sm font-semibold text-[#4f5a52]">
+            <span className="text-sm font-semibold text-[var(--muted)]">
               {formatMinutesToClock(confirmedBooking.start)}–
               {formatMinutesToClock(confirmedBooking.end)} ({slotType.duration} min)
             </span>
@@ -189,8 +189,8 @@ export const PublicBookingView: React.FC<Props> = ({
           </button>
         </div>
 
-        <div className="pt-4 border-t border-[#e4dccb] flex items-center justify-center gap-2 text-xs text-[#4f5a52]">
-          <ShieldCheck size={14} className="text-[#163a2a]" />
+        <div className="pt-4 border-t border-[var(--line)] flex items-center justify-center gap-2 text-xs text-[var(--muted)]">
+          <ShieldCheck size={14} className="text-[var(--ink)]" />
           <span>calendario.ch • Dati custoditi su Archivio.ch (Bunker Ginevra)</span>
         </div>
       </div>
@@ -199,22 +199,22 @@ export const PublicBookingView: React.FC<Props> = ({
 
   // ── Schermata di Selezione e Form ──
   return (
-    <div className={`max-w-2xl mx-auto ${isEmbed ? 'p-3' : 'p-6 my-6'} bg-[#fbf8f1] border-1.5 border-[#163a2a] rounded-2xl shadow-xl flex flex-col gap-6`}>
+    <div className={`max-w-2xl mx-auto ${isEmbed ? 'p-3' : 'p-6 my-6'} bg-[var(--cream)] border-1.5 border-[var(--edge)] rounded-2xl shadow-xl flex flex-col gap-6`}>
       {/* Intestazione */}
-      <div className="flex items-start justify-between border-b border-[#163a2a] pb-4">
+      <div className="flex items-start justify-between border-b border-[var(--edge)] pb-4">
         <div>
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="text-xs text-[#4f5a52] hover:text-[#163a2a] flex items-center gap-1 mb-2 font-bold"
+              className="text-xs text-[var(--muted)] hover:text-[var(--ink)] flex items-center gap-1 mb-2 font-bold"
             >
               <ArrowLeft size={14} /> Torna all'agenda
             </button>
           )}
-          <span className="lbl text-[#4f5a52]">Prenotazione Online</span>
-          <h1 className="text-2xl font-bold text-[#163a2a] m-0">{slotType.name}</h1>
-          <div className="flex items-center gap-3 text-xs text-[#4f5a52] mt-1">
+          <span className="lbl text-[var(--muted)]">Prenotazione Online</span>
+          <h1 className="text-2xl font-bold text-[var(--ink)] m-0">{slotType.name}</h1>
+          <div className="flex items-center gap-3 text-xs text-[var(--muted)] mt-1">
             <span className="flex items-center gap-1">
               <Clock size={13} /> {slotType.duration} min
             </span>
@@ -230,8 +230,8 @@ export const PublicBookingView: React.FC<Props> = ({
             {slotType.priceChf ? (
               <>
                 <span>•</span>
-                <span className="font-bold text-[#163a2a] flex items-center gap-1">
-                  <CreditCard size={13} className="text-[#b08a3e]" />
+                <span className="font-bold text-[var(--ink)] flex items-center gap-1">
+                  <CreditCard size={13} className="text-[var(--gold)]" />
                   {formatChf(slotType.priceChf)}
                 </span>
               </>
@@ -240,26 +240,26 @@ export const PublicBookingView: React.FC<Props> = ({
         </div>
 
         <div className="text-right">
-          <span className="text-xs text-[#4f5a52] block">Professionista:</span>
-          <b className="text-sm text-[#163a2a]">{ownerName}</b>
+          <span className="text-xs text-[var(--muted)] block">Professionista:</span>
+          <b className="text-sm text-[var(--ink)]">{ownerName}</b>
         </div>
       </div>
 
       {slotType.desc && (
-        <p className="text-xs text-[#4f5a52] -mt-2 m-0 bg-[#f4efe4] p-3 rounded-xl border border-[#e4dccb]">
+        <p className="text-xs text-[var(--muted)] -mt-2 m-0 bg-[var(--paper)] p-3 rounded-xl border border-[var(--line)]">
           {slotType.desc}
         </p>
       )}
 
       {error && (
-        <div className="p-2.5 rounded-lg bg-[#fbeeee] border border-[#b3202a] text-[#b3202a] text-xs font-semibold">
+        <div className="p-2.5 rounded-lg bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] text-xs font-semibold">
           {error}
         </div>
       )}
 
       {/* 1. Selettore Giorno */}
       <div>
-        <span className="lbl text-[#163a2a] block mb-2">1. Scegli il Giorno</span>
+        <span className="lbl text-[var(--ink)] block mb-2">1. Scegli il Giorno</span>
         {availableDays.length > 0 ? (
           <div className="flex gap-2 overflow-x-auto pb-2">
             {availableDays.map((k) => {
@@ -275,8 +275,8 @@ export const PublicBookingView: React.FC<Props> = ({
                   }}
                   className={`flex flex-col items-center justify-center p-3 rounded-xl border-1.5 transition-all min-w-[62px] ${
                     isSelected
-                      ? 'bg-[#163a2a] text-white border-[#163a2a] shadow-sm'
-                      : 'bg-[#f4efe4] text-[#163a2a] border-[#163a2a] hover:bg-[#e9e2d3]'
+                      ? 'bg-[var(--ink)] text-white border-[var(--edge)] shadow-sm'
+                      : 'bg-[var(--paper)] text-[var(--ink)] border-[var(--edge)] hover:bg-[var(--dis-bg)]'
                   }`}
                 >
                   <span className="text-[11px] uppercase tracking-wider font-semibold opacity-85">
@@ -291,7 +291,7 @@ export const PublicBookingView: React.FC<Props> = ({
             })}
           </div>
         ) : (
-          <p className="text-xs text-[#4f5a52] py-4">
+          <p className="text-xs text-[var(--muted)] py-4">
             Al momento non ci sono slot liberi disponibili. Riprova più avanti.
           </p>
         )}
@@ -300,7 +300,7 @@ export const PublicBookingView: React.FC<Props> = ({
       {/* 2. Selettore Orario */}
       {availableDays.length > 0 && (
         <div>
-          <span className="lbl text-[#163a2a] block mb-2">
+          <span className="lbl text-[var(--ink)] block mb-2">
             2. Scegli l'Orario per {formatLongDate(selectedDate)}
           </span>
           {freeSlotsForDate.length > 0 ? (
@@ -314,8 +314,8 @@ export const PublicBookingView: React.FC<Props> = ({
                     onClick={() => setSelectedTime(fs.start)}
                     className={`h-11 rounded-xl border-1.5 font-bold text-xs tabular-nums flex items-center justify-center transition-all ${
                       isSelected
-                        ? 'bg-[#b3202a] text-white border-[#b3202a] shadow-md'
-                        : 'bg-[#f4efe4] text-[#163a2a] border-[#163a2a] hover:bg-[#e9e2d3]'
+                        ? 'bg-[var(--accent)] text-white border-[var(--accent)] shadow-md'
+                        : 'bg-[var(--paper)] text-[var(--ink)] border-[var(--edge)] hover:bg-[var(--dis-bg)]'
                     }`}
                   >
                     {formatMinutesToClock(fs.start)}
@@ -324,7 +324,7 @@ export const PublicBookingView: React.FC<Props> = ({
               })}
             </div>
           ) : (
-            <p className="text-xs text-[#4f5a52]">
+            <p className="text-xs text-[var(--muted)]">
               Tutti gli slot per questa giornata sono già stati prenotati.
             </p>
           )}
@@ -333,8 +333,8 @@ export const PublicBookingView: React.FC<Props> = ({
 
       {/* 3. Form Dati Cliente */}
       {selectedTime !== null && (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 pt-3 border-t border-[#163a2a]">
-          <span className="lbl text-[#163a2a] block">3. I Tuoi Recapiti</span>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 pt-3 border-t border-[var(--edge)]">
+          <span className="lbl text-[var(--ink)] block">3. I Tuoi Recapiti</span>
 
           <div className="grid2">
             <label className="field">
@@ -369,8 +369,8 @@ export const PublicBookingView: React.FC<Props> = ({
                 placeholder="+41 79 123 45 67"
               />
             </label>
-            <div className="p-3 rounded-xl bg-[#f4efe4] border border-[#e4dccb] flex items-center gap-2 text-xs text-[#4f5a52]">
-              <ShieldCheck size={18} className="text-[#163a2a] flex-shrink-0" />
+            <div className="p-3 rounded-xl bg-[var(--paper)] border border-[var(--line)] flex items-center gap-2 text-xs text-[var(--muted)]">
+              <ShieldCheck size={18} className="text-[var(--ink)] flex-shrink-0" />
               <span>Conformità nLPD: i tuoi dati non verranno mai ceduti o tracciati.</span>
             </div>
           </div>

@@ -1,12 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CalendarEvent, Booking, SlotType } from '../types';
-import {
-  formatLongDate,
-  formatMinutesToClock,
-  getHoliday
-} from '../services/swissHolidays';
+import { parseKey, keyFromDate, GIORNI_BREVI_IT, getHoliday, formatLongDate } from '../services/swissHolidays';
 import { getEventsOn, getBookingsOn, calculateFreeSlots } from '../services/calendarEngine';
-import { Plus, Clock, MapPin, Calendar } from 'lucide-react';
+import { HH, clock, dayItems, GridItem, DropPreview } from './WeekView';
+import { useEventDrag, useSwipe } from './gestures';
+import { Plus } from 'lucide-react';
 
 interface Props {
   cursorDate: string; // YYYY-MM-DD
@@ -18,10 +16,12 @@ interface Props {
   onSelectEvent: (e: CalendarEvent) => void;
   onSelectBooking: (b: Booking) => void;
   onNewEventAt: (date: string, startMinutes: number) => void;
+  onUpdateEventTime?: (eventId: string, newStart: number, newEnd: number, newDate?: string) => void;
+  onSwipe?: (dir: number) => void;
+  onNotify?: (msg: string) => void;
 }
 
-const HH = 56;
-
+/** Vista giorno nello stile della proposta B: una colonna della settimana, più il riepilogo a destra. */
 export const DayView: React.FC<Props> = ({
   cursorDate,
   events,
@@ -31,257 +31,116 @@ export const DayView: React.FC<Props> = ({
   endHour = 21,
   onSelectEvent,
   onSelectBooking,
-  onNewEventAt
+  onNewEventAt,
+  onUpdateEventTime,
+  onSwipe,
+  onNotify
 }) => {
-  const dayEvents = getEventsOn(events, cursorDate);
-  const dayBookings = getBookingsOn(bookings, cursorDate);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const colRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const d = parseKey(cursorDate);
+  const isToday = cursorDate === keyFromDate(new Date());
   const holiday = getHoliday(cursorDate);
+  const items = dayItems(cursorDate, events, bookings, slotTypes);
+  const allDay = getEventsOn(events, cursorDate).filter((e) => e.allDay);
+  const { drag, begin, wasDragging } = useEventDrag({
+    dayKeys: [cursorDate], colRefs, scrollRef, events, bookings, startHour, endHour, hh: HH,
+    onCommit: (id, s, e2, nd) => onUpdateEventTime?.(id, s, e2, nd), onNotify
+  });
+  useSwipe(scrollRef, onSwipe);
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const h = new Date().getHours();
+    const target = isToday && h >= 19 ? Math.min(endHour - 3, h - 1) : 8;
+    scrollRef.current.scrollTop = Math.max(0, (target - startHour) * HH - 8);
+  }, [cursorDate, startHour, endHour, isToday]);
 
   const totalHeight = (endHour - startHour) * HH;
   const hours: number[] = [];
-  for (let h = startHour; h < endHour; h++) {
-    hours.push(h);
-  }
+  for (let h = startHour; h <= endHour; h++) hours.push(h);
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
 
-  // Tutti gli impegni uniti e ordinati
-  const items = [
-    ...dayEvents.map((e) => ({
-      kind: 'event' as const,
-      id: e.id,
-      title: e.title,
-      start: e.start,
-      end: e.end,
-      allDay: e.allDay,
-      place: e.place,
-      busy: e.busy,
-      repeat: e.repeat,
-      raw: e
-    })),
-    ...dayBookings.map((b) => ({
-      kind: 'booking' as const,
-      id: b.id,
-      title: `${b.name} (${slotTypes.find((t) => t.id === b.typeId)?.name || 'Incontro'})`,
-      start: b.start,
-      end: b.end,
-      allDay: false,
-      place: 'Incontro Cliente',
-      busy: true,
-      status: b.status,
-      raw: b
-    }))
-  ].sort((a, b) => {
-    if (a.allDay && !b.allDay) return -1;
-    if (!a.allDay && b.allDay) return 1;
-    return a.start - b.start;
-  });
+  // riepilogo
+  const list = [
+    ...allDay.map((e) => ({ id: e.id, s: -1, when: 'Tutto il giorno', title: e.title, kind: 'own' as const, open: () => onSelectEvent(e) })),
+    ...getEventsOn(events, cursorDate).filter((e) => !e.allDay).map((e) => ({ id: e.id, s: e.start, when: `${clock(e.start)}–${clock(e.end)}`, title: e.title, kind: 'own' as const, open: () => onSelectEvent(e) })),
+    ...getBookingsOn(bookings, cursorDate).map((b) => ({ id: b.id, s: b.start, when: `${clock(b.start)}–${clock(b.end)}`, title: b.name, kind: (b.status === 'pending' ? 'pending' : 'booked') as 'pending' | 'booked', open: () => onSelectBooking(b) }))
+  ].sort((a, b) => a.s - b.s);
+
+  const onColClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (wasDragging() || (e.target as HTMLElement).closest('.b-ev')) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    onNewEventAt(cursorDate, startHour * 60 + Math.floor(((e.clientY - rect.top) / HH) * 2) * 30);
+  };
 
   return (
-    <div className="day-wrap">
-      {/* Colonna Griglia Oraria Singola */}
-      <div className="card">
-        <div className="p-4 border-b border-[#163a2a] bg-[#fbf8f1] flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-[#163a2a] m-0">
-              {formatLongDate(cursorDate)}
-            </h2>
-            {holiday && (
-              <span className="text-xs font-semibold text-[#b3202a]">
-                🇨🇭 {holiday}
-              </span>
-            )}
+    <div className="b-day">
+      <div className="b-cal" ref={scrollRef}>
+        <div className="b-dayhead">
+          <div className={`b-wday${isToday ? ' today' : ''}`}>
+            <span className="n">{GIORNI_BREVI_IT[d.getDay()]}</span>
+            <span className="d">{d.getDate()}</span>
+            {holiday && <span className="h">{holiday}</span>}
           </div>
-          <button
-            type="button"
-            onClick={() => onNewEventAt(cursorDate, 540)}
-            className="btn line text-xs"
-          >
-            <Plus size={14} /> Nuovo Impegno
-          </button>
+          {allDay.map((e) => (
+            <button key={e.id} type="button" className="b-pill k-own" onClick={() => onSelectEvent(e)}>{e.title}</button>
+          ))}
         </div>
-
-        <div className="gscroll" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-          <div
-            className="g-body"
-            style={{ gridTemplateColumns: '52px minmax(0, 1fr)' }}
-          >
-            {/* Colonna Ore */}
-            <div className="g-hours" style={{ height: `${totalHeight}px` }}>
-              {hours.map((h) => (
-                <span key={h} style={{ top: `${(h - startHour) * HH}px` }}>
-                  {h > startHour ? `${String(h).padStart(2, '0')}:00` : ''}
-                </span>
-              ))}
-            </div>
-
-            {/* Colonna Giorno */}
-            <div
-              className="g-col"
-              style={{ height: `${totalHeight}px` }}
-              onClick={(e) => {
-                if ((e.target as HTMLElement).closest('.ev')) return;
-                const rect = e.currentTarget.getBoundingClientRect();
-                const clickY = e.clientY - rect.top;
-                const clickMinutes =
-                  startHour * 60 + Math.floor((clickY / HH) * 60 / 15) * 15;
-                onNewEventAt(cursorDate, clickMinutes);
-              }}
-            >
-              {hours.map((h) => (
-                <React.Fragment key={h}>
-                  <div
-                    className="g-line"
-                    style={{ top: `${(h - startHour) * HH}px` }}
-                  />
-                  <div
-                    className="g-line half"
-                    style={{ top: `${(h - startHour) * HH + HH / 2}px` }}
-                  />
-                </React.Fragment>
-              ))}
-
-              {/* Elementi Giorno */}
-              {items
-                .filter((it) => !it.allDay)
-                .map((it) => {
-                  const s = Math.max(it.start, startHour * 60);
-                  const e = Math.min(it.end, endHour * 60);
-                  if (e <= s) return null;
-                  const top = ((s - startHour * 60) / 60) * HH + 1;
-                  const height = Math.max(((e - s) / 60) * HH - 2, 22);
-
-                  const isBooking = it.kind === 'booking';
-                  const cls = isBooking
-                    ? it.status === 'pending'
-                      ? 'pending'
-                      : 'booked'
-                    : 'own';
-
-                  return (
-                    <button
-                      key={it.id}
-                      type="button"
-                      onClick={() =>
-                        isBooking
-                          ? onSelectBooking(it.raw as Booking)
-                          : onSelectEvent(it.raw as CalendarEvent)
-                      }
-                      className={`ev ${cls}`}
-                      style={{
-                        top: `${top}px`,
-                        height: `${height}px`,
-                        left: '8px',
-                        width: 'calc(100% - 16px)'
-                      }}
-                    >
-                      <span className="t">{it.title}</span>
-                      <span className="m">
-                        {formatMinutesToClock(it.start)}–{formatMinutesToClock(it.end)}
-                        {it.place ? ` · ${it.place}` : ''}
-                      </span>
-                    </button>
-                  );
-                })}
-            </div>
+        <div className="b-dbody">
+          <div className="b-hours" style={{ height: totalHeight }} aria-hidden="true">
+            {hours.map((h) => <span key={h} style={{ top: (h - startHour) * HH }}>{h}:00</span>)}
+          </div>
+          <div ref={(el) => { colRefs.current[0] = el; }} className={`b-col${isToday ? ' today' : ''}`} style={{ height: totalHeight }} onClick={onColClick} aria-label={formatLongDate(cursorDate)}>
+            {holiday && <div className="hol" />}
+            {hours.map((h) => <div key={h} className="ln" style={{ top: (h - startHour) * HH }} />)}
+            {!items.length && !allDay.length && <span className="free-day">Giornata libera</span>}
+            {items.map((it, i) => (
+              <GridItem key={i} it={it} startHour={startHour} endHour={endHour} onSelectEvent={onSelectEvent} onSelectBooking={onSelectBooking}
+                dnd={onUpdateEventTime ? { begin, wasDragging, day: 0, dragId: drag?.id } : undefined} />
+            ))}
+            {drag && <DropPreview drag={drag} startHour={startHour} />}
+            {isToday && nowMin >= startHour * 60 && nowMin < endHour * 60 && (
+              <div className="b-now" style={{ top: ((nowMin - startHour * 60) / 60) * HH }} />
+            )}
           </div>
         </div>
       </div>
 
-      {/* Pannello Laterale In Programma & Slot */}
-      <div className="flex flex-col gap-4">
-        <section className="panel" aria-label="Riepilogo in programma">
-          <h2 className="lbl text-[#163a2a]">In Programma</h2>
-          <div className="flex flex-col gap-1 -mx-2">
-            {items.length > 0 ? (
-              items.map((it) => {
-                const timeStr = it.allDay
-                  ? 'Tutto il giorno'
-                  : `${formatMinutesToClock(it.start)}–${formatMinutesToClock(it.end)}`;
-
-                return (
-                  <button
-                    key={it.id}
-                    type="button"
-                    onClick={() =>
-                      it.kind === 'booking'
-                        ? onSelectBooking(it.raw as Booking)
-                        : onSelectEvent(it.raw as CalendarEvent)
-                    }
-                    className="row-btn"
-                  >
-                    <span className="tm">{timeStr}</span>
-                    <i
-                      className="sw"
-                      style={{
-                        background: it.kind === 'booking' ? '#b3202a' : '#163a2a',
-                        width: '10px'
-                      }}
-                    />
-                    <span className="ttl">
-                      {it.title}
-                      {it.place ? <small>{it.place}</small> : null}
-                    </span>
-                    {it.kind === 'booking' ? (
-                      <span
-                        className={`tag ${it.status === 'pending' ? 'outr' : 'red'}`}
-                      >
-                        {it.status === 'pending' ? 'Da approvare' : 'Prenotato'}
-                      </span>
-                    ) : (
-                      <span className="tag line">Impegno</span>
-                    )}
-                  </button>
-                );
-              })
-            ) : (
-              <p className="empty text-xs py-3 px-2">
-                Nessun impegno in programma per questa giornata.
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => onNewEventAt(cursorDate, 540)}
-            className="btn line mt-2"
-          >
-            <Plus size={15} /> Aggiungi Impegno
+      <div className="b-dside">
+        <section className="b-card b-sec">
+          <h2>In programma</h2>
+          {list.length ? (
+            list.map((x) => (
+              <button key={x.id} type="button" className="b-row" onClick={x.open}>
+                <i className={`k-${x.kind}`} />
+                <span className="who"><b>{x.title}</b><small>{x.when}{x.kind === 'pending' ? ' · da confermare' : x.kind === 'booked' ? ' · prenotato' : ''}</small></span>
+              </button>
+            ))
+          ) : (
+            <span className="b-empty">Nessun impegno. Giornata libera.</span>
+          )}
+          <button type="button" className="b-ghost" onClick={() => onNewEventAt(cursorDate, 540)}>
+            <Plus size={16} /> Aggiungi impegno
           </button>
         </section>
 
-        {/* Slot Prenotabili Attivi */}
-        <section className="panel" aria-label="Slot prenotabili">
-          <h2 className="lbl text-[#163a2a]">Slot Prenotabili</h2>
-          <div className="flex flex-col gap-3">
-            {slotTypes.filter((t) => t.active).map((t) => {
-              const frees = calculateFreeSlots(cursorDate, t, events, bookings);
-              return (
-                <div key={t.id} className="flex flex-col gap-1.5 pb-2 border-b border-[#e4dccb] last:border-b-0">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-[#163a2a]">{t.name}</span>
-                    <span className="text-[#4f5a52]">
-                      {frees.length > 0
-                        ? `${frees.length} ${frees.length === 1 ? 'libero' : 'liberi'}`
-                        : 'nessuno libero'}
-                    </span>
-                  </div>
-                  {frees.length > 0 && (
-                    <div className="times">
-                      {frees.slice(0, 6).map((fs, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => onNewEventAt(cursorDate, fs.start)}
-                          className="time-btn text-xs"
-                          title={`Prenota alle ${formatMinutesToClock(fs.start)}`}
-                        >
-                          {formatMinutesToClock(fs.start)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+        <section className="b-card b-sec">
+          <h2>Slot prenotabili</h2>
+          {slotTypes.filter((t) => t.active).map((t) => {
+            const fs = calculateFreeSlots(cursorDate, t, events, bookings);
+            return (
+              <div key={t.id} className="b-slot" style={{ cursor: 'default' }}>
+                <b>{t.name} · {t.duration} min</b>
+                {fs.length ? (
+                  <div className="b-times">{fs.map((s) => <span key={s.start}>{clock(s.start)}</span>)}</div>
+                ) : (
+                  <small>Nessun orario libero in questo giorno.</small>
+                )}
+              </div>
+            );
+          })}
         </section>
       </div>
     </div>

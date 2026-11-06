@@ -39,7 +39,7 @@ export const EmbedView: React.FC<Props> = ({
     initialSlotId || slotTypes[0]?.id || ''
   );
   const [format, setFormat] = useState<EmbedConfig['format']>('pagine');
-  const [tema, setTema] = useState<'natale' | 'neutro'>('natale');
+  const [tema, setTema] = useState<'standard' | 'neutro'>('standard');
   const [variante, setVariante] = useState<'compatta' | 'completa'>('compatta');
   const [buttonLabel, setButtonLabel] = useState('Prenota un appuntamento');
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
@@ -76,14 +76,14 @@ export const EmbedView: React.FC<Props> = ({
         <button
           type="button"
           onClick={onBackToSlots}
-          className="btn ghost self-start h-8 p-0 text-[#163a2a] flex items-center gap-1 font-bold"
+          className="btn ghost self-start h-8 p-0 text-[var(--ink)] flex items-center gap-1 font-bold"
         >
           <ArrowLeft size={16} /> Torna a Slot Condivisi
         </button>
 
         <div>
-          <span className="lbl text-[#4f5a52]">Integrazione Sovrana</span>
-          <h1 className="h1 text-[#163a2a] text-xl">Incorpora su altri siti</h1>
+          <span className="lbl text-[var(--muted)]">Integrazione Sovrana</span>
+          <h1 className="h1 text-[var(--ink)] text-xl">Incorpora su altri siti</h1>
         </div>
 
         {/* Selezione Slot */}
@@ -103,7 +103,7 @@ export const EmbedView: React.FC<Props> = ({
 
         {/* Selezione Formato */}
         <fieldset className="emb-fmt">
-          <legend className="lbl text-[#163a2a]">Formato d'integrazione</legend>
+          <legend className="lbl text-[var(--ink)]">Formato d'integrazione</legend>
           {FORMATS.map((fmt, idx) => (
             <button
               key={fmt.key}
@@ -132,10 +132,10 @@ export const EmbedView: React.FC<Props> = ({
               <div className="seg">
                 <button
                   type="button"
-                  onClick={() => setTema('natale')}
-                  aria-pressed={tema === 'natale'}
+                  onClick={() => setTema('standard')}
+                  aria-pressed={tema === 'standard'}
                 >
-                  Natale (Oro)
+                  calendario.ch
                 </button>
                 <button
                   type="button"
@@ -225,7 +225,7 @@ export const EmbedView: React.FC<Props> = ({
               <div className="bld-body">
                 {/* Colonna Blocchi pagine.ch */}
                 <aside className="bld-blocks">
-                  <span className="lbl text-[#4f5a52]">Blocchi</span>
+                  <span className="lbl text-[var(--muted)]">Blocchi</span>
                   <div className="bld-item">Titolo</div>
                   <div className="bld-item">Paragrafo</div>
                   <div className="bld-item">Immagine</div>
@@ -266,7 +266,7 @@ export const EmbedView: React.FC<Props> = ({
                             <span className="avatar w-8 h-8 text-xs">EB</span>
                             <div>
                               <b className="text-xs">{selectedSlot.name}</b>
-                              <small className="block text-[11px] text-[#4f5a52]">
+                              <small className="block text-[11px] text-[var(--muted)]">
                                 {ownerName} · {selectedSlot.duration} min
                               </small>
                             </div>
@@ -305,14 +305,14 @@ export const EmbedView: React.FC<Props> = ({
                 {/* Inspector Ispettore Blocco pagine.ch */}
                 <aside className="bld-insp">
                   <div>
-                    <span className="lbl text-[#4f5a52]">Blocco selezionato</span>
-                    <div className="font-bold text-base text-[#163a2a]">Prenotazioni</div>
+                    <span className="lbl text-[var(--muted)]">Blocco selezionato</span>
+                    <div className="font-bold text-base text-[var(--ink)]">Prenotazioni</div>
                   </div>
                   <div className="bld-acc">
                     <span className="avatar w-8 h-8 text-xs">EB</span>
                     <div>
                       <b className="text-xs">calendario.ch/{handle}</b>
-                      <small className="block text-[11px] text-[#4f5a52]">
+                      <small className="block text-[11px] text-[var(--muted)]">
                         Account Sovrano Collegato
                       </small>
                     </div>
@@ -330,7 +330,7 @@ export const EmbedView: React.FC<Props> = ({
                       ))}
                     </select>
                   </label>
-                  <p className="text-[11px] text-[#4f5a52] m-0">
+                  <p className="text-[11px] text-[var(--muted)] m-0">
                     Gli orari arrivano istantaneamente da <b>calendario.ch</b> e le
                     richieste sono sincronizzate nel Caveau di <b>Archivio.ch</b>.
                   </p>
@@ -389,7 +389,7 @@ export const EmbedView: React.FC<Props> = ({
                       <span className="avatar w-8 h-8 text-xs">EB</span>
                       <div>
                         <b className="text-xs">{selectedSlot.name}</b>
-                        <small className="block text-[11px] text-[#4f5a52]">
+                        <small className="block text-[11px] text-[var(--muted)]">
                           {ownerName} · {selectedSlot.duration} min
                         </small>
                       </div>
@@ -430,12 +430,12 @@ export const EmbedView: React.FC<Props> = ({
                   onClick={() => setIsPopupOpen(false)}
                 >
                   <div
-                    className="relative w-full max-w-md bg-[#fbf8f1] rounded-2xl p-4 shadow-2xl border border-[#163a2a]"
+                    className="relative w-full max-w-md bg-[var(--cream)] rounded-2xl p-4 shadow-2xl border border-[var(--edge)]"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       onClick={() => setIsPopupOpen(false)}
-                      className="absolute top-3 right-3 w-8 h-8 rounded-full border border-[#163a2a] flex items-center justify-center text-xs font-bold"
+                      className="absolute top-3 right-3 w-8 h-8 rounded-full border border-[var(--edge)] flex items-center justify-center text-xs font-bold"
                     >
                       ✕
                     </button>
@@ -444,7 +444,7 @@ export const EmbedView: React.FC<Props> = ({
                         <span className="avatar w-8 h-8 text-xs">EB</span>
                         <div>
                           <b className="text-xs">{selectedSlot.name}</b>
-                          <small className="block text-[11px] text-[#4f5a52]">
+                          <small className="block text-[11px] text-[var(--muted)]">
                             {ownerName} · {selectedSlot.duration} min
                           </small>
                         </div>
@@ -486,8 +486,8 @@ export const EmbedView: React.FC<Props> = ({
         <section className="panel" aria-label="Codice o istruzioni d'incorporamento">
           {format === 'pagine' ? (
             <div className="flex flex-col gap-2">
-              <h2 className="lbl text-[#163a2a]">Come aggiungerlo su pagine.ch</h2>
-              <ol className="m-0 pl-5 text-xs text-[#4f5a52] space-y-1.5 list-decimal font-medium">
+              <h2 className="lbl text-[var(--ink)]">Come aggiungerlo su pagine.ch</h2>
+              <ol className="m-0 pl-5 text-xs text-[var(--muted)] space-y-1.5 list-decimal font-medium">
                 <li>Nel builder di <b>pagine.ch</b> scegli <b>Aggiungi blocco</b>.</li>
                 <li>Seleziona il blocco <b>Prenotazioni (calendario.ch) 🇨🇭</b>.</li>
                 <li>
@@ -499,7 +499,7 @@ export const EmbedView: React.FC<Props> = ({
           ) : (
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
-                <h2 className="lbl text-[#163a2a]">Codice HTML / JS da incollare</h2>
+                <h2 className="lbl text-[var(--ink)]">Codice HTML / JS da incollare</h2>
                 <button
                   type="button"
                   onClick={handleCopyCode}
@@ -511,7 +511,7 @@ export const EmbedView: React.FC<Props> = ({
               <pre className="code">
                 <code>{embedCode}</code>
               </pre>
-              <p className="text-xs text-[#4f5a52] m-0">
+              <p className="text-xs text-[var(--muted)] m-0">
                 Incollalo nel punto desiderato della tua pagina web. Funziona con qualsiasi
                 piattaforma senza richiedere cookie né cessione di dati a terzi.
               </p>

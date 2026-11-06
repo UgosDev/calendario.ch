@@ -69,3 +69,18 @@ npm run deploy
 - **UCOIN.ch**: Borsellino sovrano prepagato in franchi
 - **LaMappa.ch**: Mappe e trasporto pubblico svizzero
 - **calendario.ch**: Scheduling, appuntamenti e disponibilità
+
+## Temi
+
+Il tema attivo si sceglie in `config.ts` (`TEMA`). I colori, i font, i raggi e lo spessore delle linee
+sono variabili CSS: i valori predefiniti in `index.css` sono quelli natalizi, e ogni file in
+`styles/themes/` li ridefinisce.
+
+| Tema        | Stato        | Stile                                                      |
+|-------------|--------------|------------------------------------------------------------|
+| `azzurro`   | attivo       | stile B: DM Sans, accento #1f5f8b, schede bianche, pillole  |
+| `arancione` | accantonato  | stile A: Inter Tight, inchiostro #111, accento #c2410c      |
+| `natale`    | accantonato  | verde abete, rosso, oro e neve (tasto neve solo qui)        |
+
+Nei componenti i colori si scrivono come variabili, per esempio `text-[var(--ink)]` o `bg-[var(--accent)]`,
+mai come esadecimali: così cambiano da soli con il tema.

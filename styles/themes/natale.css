@@ -1,0 +1,6 @@
+/* Tema Natale (accantonato): verde abete, rosso, crema, oro e neve. I suoi valori sono anche quelli predefiniti in index.css. Si attiva in config.ts. */
+[data-theme="natale"]{
+  --page:#fbf8f1; --ink:#163a2a; --muted:#4f5a52; --accent:#b3202a; --cream:#fbf8f1; --paper:#f4efe4;
+  --edge:#163a2a; --line:#e4dccb; --gold:#b08a3e; --rule:#b08a3e;
+  --font:'Inter Tight', system-ui, -apple-system, sans-serif;
+}

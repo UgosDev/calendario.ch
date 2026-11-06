@@ -95,7 +95,7 @@ export const SlotTypeModal: React.FC<Props> = ({ slotType, onSave, onClose }) =>
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="dialog wide" role="dialog" aria-labelledby="dlg-type-title">
         <div className="dlg-head">
-          <h2 id="dlg-type-title" className="text-xl font-bold text-[#163a2a]">
+          <h2 id="dlg-type-title" className="text-xl font-bold text-[var(--ink)]">
             {isNew ? 'Nuovo Tipo di Slot Condiviso' : 'Modifica Tipo di Slot'}
           </h2>
           <button className="icon-btn ml-auto" onClick={onClose} aria-label="Chiudi">
@@ -104,7 +104,7 @@ export const SlotTypeModal: React.FC<Props> = ({ slotType, onSave, onClose }) =>
         </div>
 
         {error && (
-          <div className="p-2.5 rounded-lg bg-[#fbeeee] border border-[#b3202a] text-[#b3202a] text-xs font-semibold">
+          <div className="p-2.5 rounded-lg bg-[var(--accent-soft)] border border-[var(--accent)] text-[var(--accent)] text-xs font-semibold">
             {error}
           </div>
         )}
@@ -199,7 +199,7 @@ export const SlotTypeModal: React.FC<Props> = ({ slotType, onSave, onClose }) =>
                     />
                     <span
                       className={`${
-                        active ? 'bg-[#163a2a] text-white' : 'bg-[#f4efe4] text-[#4f5a52]'
+                        active ? 'bg-[var(--ink)] text-white' : 'bg-[var(--paper)] text-[var(--muted)]'
                       } transition-colors`}
                     >
                       {g.label}
@@ -277,18 +277,18 @@ export const SlotTypeModal: React.FC<Props> = ({ slotType, onSave, onClose }) =>
           </div>
 
           {/* Tariffazione UCOIN / TWINT */}
-          <div className="p-3 bg-[#f4efe4] border border-[#163a2a] rounded-xl flex items-center justify-between gap-4">
+          <div className="p-3 bg-[var(--paper)] border border-[var(--edge)] rounded-xl flex items-center justify-between gap-4">
             <div className="flex-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#163a2a] block">
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)] block">
                 Tariffa Incontro (Opzionale)
               </span>
-              <span className="text-xs text-[#4f5a52]">
+              <span className="text-xs text-[var(--muted)]">
                 Se impostata, il cliente può saldare con TWINT o con il borsellino UCOIN.
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-[#fbf8f1] border border-[#163a2a] rounded-lg px-2.5 py-1">
-                <span className="text-xs font-bold text-[#163a2a]">CHF</span>
+              <div className="flex items-center gap-1.5 bg-[var(--cream)] border border-[var(--edge)] rounded-lg px-2.5 py-1">
+                <span className="text-xs font-bold text-[var(--ink)]">CHF</span>
                 <input
                   type="number"
                   min={0}
@@ -298,7 +298,7 @@ export const SlotTypeModal: React.FC<Props> = ({ slotType, onSave, onClose }) =>
                   className="w-16 border-0 bg-transparent font-bold text-sm text-right focus:outline-none"
                 />
               </div>
-              <span className="text-xs font-semibold text-[#b08a3e]">
+              <span className="text-xs font-semibold text-[var(--gold)]">
                 ({formatUcoin(chfToUcoin(priceChf))})
               </span>
             </div>
