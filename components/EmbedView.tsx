@@ -35,6 +35,20 @@ export const EmbedView: React.FC<Props> = ({
   onBackToSlots,
   onToast
 }) => {
+  if (slotTypes.length === 0) {
+    return (
+      <div className="max-w-xl mx-auto my-12 p-8 bg-[var(--cream)] border border-[var(--edge)] rounded-2xl text-center shadow-lg">
+        <h2 className="text-xl font-bold text-[var(--ink)] mb-2">Nessun tipo di slot disponibile</h2>
+        <p className="text-xs text-[var(--muted)] mb-6">
+          Per poter generare i codici di incorporamento o i link di prenotazione per il tuo sito o pagine.ch, devi prima configurare almeno un tipo di slot.
+        </p>
+        <button type="button" onClick={onBackToSlots} className="btn dark text-xs">
+          Configura il tuo primo slot
+        </button>
+      </div>
+    );
+  }
+
   const [selectedSlotId, setSelectedSlotId] = useState<string>(
     initialSlotId || slotTypes[0]?.id || ''
   );

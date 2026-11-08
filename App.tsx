@@ -53,22 +53,40 @@ import {
   CalendarDays,
   List,
   Layers,
-  Sparkles
+  Sparkles,
+  ShieldCheck
 } from 'lucide-react';
 
-const LOCAL_STORAGE_KEY = 'calendario.ch.sovereign.v2';
+const LOCAL_STORAGE_KEY = 'calendario.ch.sovereign.v3';
 
 export default function App() {
-  // ── 1. Inizializzazione Stato Sovrano da localStorage o Seed ──
+  // ── 1. Inizializzazione Stato Sovrano da localStorage o Stato Pulito ──
   const [calendarState, setCalendarState] = useState<SovereignCalendarState>(() => {
     try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.v) return parsed;
+      if (typeof window !== 'undefined') {
+        // Pulizia vecchie chiavi con dati finti o seed di test
+        localStorage.removeItem('calendario.ch.sovereign.v2');
+        localStorage.removeItem('calendario.ch.sovereign.v1');
+        localStorage.removeItem('calendario_state');
+
+        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.v) {
+            // Se sono rimasti residui del profilo finto di test, purificali
+            if (parsed.settings?.owner === 'Eric Botta' || parsed.settings?.handle === 'eric') {
+              parsed.settings.owner = '';
+              parsed.settings.handle = '';
+              parsed.events = [];
+              parsed.bookings = [];
+              parsed.types = [];
+            }
+            return parsed;
+          }
+        }
       }
     } catch (e) {
-      console.warn('[Calendario] Fallback seed data:', e);
+      console.warn('[Calendario] Inizializzazione stato pulito:', e);
     }
     return getInitialSovereignState();
   });
@@ -607,6 +625,28 @@ export default function App() {
 
         {/* Area Principale */}
         <main className="b-main">
+          {/* Banner per Utente non autenticato (Zero Dati Finti) */}
+          {!user && (
+            <div className="mb-4 p-3.5 bg-[var(--paper)] border border-[var(--edge)] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck size={18} className="text-[var(--accent)] flex-shrink-0" />
+                <div>
+                  <b className="text-[var(--ink)] block">Benvenuto su calendario.ch</b>
+                  <span className="text-[var(--muted)]">
+                    Nessun dato fittizio precaricato. Accedi con USSO (Passkey FIDO2) per sincronizzare il tuo caveau sovrano su Archivio.ch o crea i tuoi primi impegni.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAccountModalOpen(true)}
+                className="btn dark text-xs h-8 px-3 whitespace-nowrap self-start sm:self-auto"
+              >
+                Accedi con USSO
+              </button>
+            </div>
+          )}
+
           {/* Visualizzazione Risultati Ricerca Globale */}
           {searchResults ? (
             <div className="list-card">

@@ -57,6 +57,25 @@ export const PublicBookingView: React.FC<Props> = ({
   onClose,
   isEmbed = false
 }) => {
+  if (!slotType) {
+    return (
+      <div className={`max-w-md mx-auto ${isEmbed ? 'p-4' : 'my-12 p-8'} bg-[var(--cream)] border border-[var(--edge)] rounded-2xl text-center shadow-lg`}>
+        <div className="w-12 h-12 rounded-full bg-[var(--paper)] text-[var(--muted)] flex items-center justify-center mx-auto mb-3">
+          <Calendar size={24} />
+        </div>
+        <h2 className="text-lg font-bold text-[var(--ink)] mb-1">Nessuno slot attivo</h2>
+        <p className="text-xs text-[var(--muted)]">
+          {ownerName ? `${ownerName} non ha ancora attivato slot di prenotazione.` : 'Nessuno slot attivo configurato per questa pagina.'}
+        </p>
+        {onClose && (
+          <button type="button" onClick={onClose} className="btn line text-xs mt-4">
+            Torna all'agenda
+          </button>
+        )}
+      </div>
+    );
+  }
+
   const todayKey = keyFromDate(new Date());
 
   // Trova i giorni disponibili con almeno 1 slot libero

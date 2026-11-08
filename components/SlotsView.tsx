@@ -84,7 +84,7 @@ export const SlotsView: React.FC<Props> = ({
   };
 
   const copyPublicLink = (slug: string) => {
-    const url = `https://calendario.ch/${handle}/${slug}`;
+    const url = handle ? `https://calendario.ch/${handle}/${slug}` : `https://calendario.ch/?slot=${slug}`;
     navigator.clipboard.writeText(url);
     onToast('Link di prenotazione copiato negli appunti');
   };
@@ -101,9 +101,20 @@ export const SlotsView: React.FC<Props> = ({
         </div>
 
         <div className="types">
-          {slotTypes.map((t) => {
-            const next = findNextFreeSlot(t, events, bookings);
-            const pubUrl = `calendario.ch/${handle}/${t.slug}`;
+          {slotTypes.length === 0 ? (
+            <div className="p-8 text-center border border-dashed border-[var(--edge)] rounded-2xl bg-[var(--paper)] w-full col-span-full">
+              <p className="text-sm font-semibold text-[var(--ink)] mb-1">Nessun tipo di slot configurato</p>
+              <p className="text-xs text-[var(--muted)] mb-4">
+                Configura i tuoi tipi di appuntamento (es. Consulenza, Visita, Colloquio) per condividere la tua disponibilità pubblica.
+              </p>
+              <button type="button" onClick={onNewSlotType} className="btn dark text-xs">
+                <Plus size={14} /> Crea il tuo primo tipo di slot
+              </button>
+            </div>
+          ) : (
+            slotTypes.map((t) => {
+              const next = findNextFreeSlot(t, events, bookings);
+              const pubUrl = handle ? `calendario.ch/${handle}/${t.slug}` : `calendario.ch/?slot=${t.slug}`;
 
             return (
               <article key={t.id} className={`type-card ${t.active ? '' : 'off'}`}>
@@ -203,7 +214,7 @@ export const SlotsView: React.FC<Props> = ({
                 </div>
               </article>
             );
-          })}
+          }))}
         </div>
       </div>
 
