@@ -337,17 +337,29 @@ export const PublicBookingView: React.FC<Props> = ({
                     setSelectedDate(k);
                     setSelectedTime(null);
                   }}
+                  style={isSelected ? { backgroundColor: 'var(--ink)', color: '#ffffff' } : undefined}
                   className={`flex flex-col items-center justify-center p-3 rounded-xl border-1.5 transition-all min-w-[62px] ${
                     isSelected
                       ? 'bg-[var(--ink)] text-white border-[var(--edge)] shadow-sm'
                       : 'bg-[var(--paper)] text-[var(--ink)] border-[var(--edge)] hover:bg-[var(--dis-bg)]'
                   }`}
                 >
-                  <span className="text-[11px] uppercase tracking-wider font-semibold opacity-85">
+                  <span
+                    className="text-[11px] uppercase tracking-wider font-semibold opacity-85"
+                    style={isSelected ? { color: '#ffffff' } : undefined}
+                  >
                     {GIORNI_BREVI_IT[d.getDay()]}
                   </span>
-                  <span className="text-lg font-bold">{d.getDate()}</span>
-                  <span className="text-[10px] opacity-75">
+                  <span
+                    className="text-lg font-bold"
+                    style={isSelected ? { color: '#ffffff' } : undefined}
+                  >
+                    {d.getDate()}
+                  </span>
+                  <span
+                    className="text-[10px] opacity-75"
+                    style={isSelected ? { color: '#ffffff' } : undefined}
+                  >
                     {MESI_IT[d.getMonth()].slice(0, 3)}
                   </span>
                 </button>
@@ -376,6 +388,7 @@ export const PublicBookingView: React.FC<Props> = ({
                     key={fs.start}
                     type="button"
                     onClick={() => setSelectedTime(fs.start)}
+                    style={isSelected ? { backgroundColor: 'var(--accent)', color: '#ffffff' } : undefined}
                     className={`h-11 rounded-xl border-1.5 font-bold text-xs tabular-nums flex items-center justify-center transition-all ${
                       isSelected
                         ? 'bg-[var(--accent)] text-white border-[var(--accent)] shadow-md'

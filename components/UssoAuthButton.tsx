@@ -32,16 +32,23 @@ export const UssoAuthButton: React.FC<UssoAuthButtonProps> = ({
     lg: 'w-5 h-5',
   }[size];
 
+  const isWhiteVariant = className.includes('bg-white');
+  const textColor = isWhiteVariant ? 'var(--ink)' : '#ffffff';
+  const bgColor = isWhiteVariant ? '#ffffff' : 'var(--ink)';
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center bg-[var(--ink)] hover:opacity-90 active:scale-[0.99] text-white font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${sizeClasses} ${className}`}
+      className={`inline-flex items-center justify-center font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+        isWhiteVariant ? 'hover:bg-slate-100 text-[var(--ink)]' : 'hover:opacity-90 active:scale-[0.99] text-white'
+      } ${sizeClasses} ${className}`}
+      style={{ backgroundColor: bgColor, color: textColor, ...props.style }}
       {...props}
     >
       <UssoBadgeIcon className={`${iconSizes} shrink-0`} />
-      <span>{loading ? 'Reindirizzamento a USSO...' : defaultText}</span>
+      <span style={{ color: textColor }}>{loading ? 'Reindirizzamento a USSO...' : defaultText}</span>
     </button>
   );
 };

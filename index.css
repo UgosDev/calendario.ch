@@ -47,21 +47,52 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-button, input, select, textarea {
-  font: inherit;
-  color: inherit;
+@layer base {
+  button, input, select, textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--accent);
+  }
 }
 
-button {
-  cursor: pointer;
+/* ==========================================================================
+   Garanzie di contrasto e testo bianco per elementi scuri e Tailwind
+   ========================================================================== */
+.text-white,
+.text-white * {
+  color: #ffffff !important;
 }
 
-a {
-  color: var(--ink);
-  text-decoration: none;
+button.text-white,
+button.text-white span,
+button.text-white svg {
+  color: #ffffff !important;
 }
-a:hover {
-  color: var(--accent);
+
+button[class*="bg-[var(--ink)]"],
+button[class*="bg-[var(--accent)]"],
+button.bg-ink,
+.btn.dark,
+.btn.red {
+  color: #ffffff !important;
+}
+
+button[class*="bg-[var(--ink)]"] span,
+button[class*="bg-[var(--accent)]"] span,
+button[class*="bg-[var(--ink)]"] svg,
+button[class*="bg-[var(--accent)]"] svg {
+  color: #ffffff !important;
 }
 
 :focus-visible {

@@ -214,6 +214,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           setSelectedDay(dayKey);
                           setSelectedSlot(slotsMap[dayKey][0]);
                         }}
+                        style={selectedDay === dayKey ? { backgroundColor: 'var(--ink)', color: '#ffffff' } : undefined}
                         className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
                           selectedDay === dayKey
                             ? 'bg-[var(--ink)] text-white border-[var(--ink)] shadow-xs'
@@ -237,14 +238,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         key={time}
                         type="button"
                         onClick={() => setSelectedSlot(time)}
+                        style={selectedSlot === time ? { backgroundColor: 'var(--accent)', color: '#ffffff' } : undefined}
                         className={`py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-between transition-all cursor-pointer ${
                           selectedSlot === time
                             ? 'bg-[var(--accent)] text-white border-[var(--accent)] shadow-xs'
                             : 'bg-white text-[var(--ink)] border-[var(--edge)] hover:bg-[var(--paper)]'
                         }`}
                       >
-                        <span>{time}</span>
-                        {selectedSlot === time && <Check size={14} />}
+                        <span style={selectedSlot === time ? { color: '#ffffff' } : undefined}>{time}</span>
+                        {selectedSlot === time && <Check size={14} className="text-white" />}
                       </button>
                     ))}
                   </div>
@@ -271,10 +273,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <button
                   type="button"
                   onClick={onLogin}
+                  style={{ backgroundColor: 'var(--ink)', color: '#ffffff' }}
                   className="w-full py-3 px-4 rounded-xl bg-[var(--ink)] hover:opacity-90 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
                 >
                   <UssoBadgeIcon className="w-4 h-4 shrink-0" />
-                  <span>Accedi con USSO per gestire la tua agenda</span>
+                  <span style={{ color: '#ffffff' }}>Accedi con USSO per gestire la tua agenda</span>
                 </button>
               </div>
             </div>
