@@ -227,7 +227,19 @@ export function clearLocalSession(): void {
       KEY_VERIFIER,
       'usso_user',
       'usso_access_token',
-      'usso_id_token'
+      'usso_id_token',
+      'usso_active_user_v5',
+      'usso_pkce_verifier_v5',
+      'usso_auth_state_v5',
+      'usso_code_verifier',
+      'usso_verifier',
+      'usso_oauth_state',
+      'usso_state',
+      'usso_v2_calendario_user',
+      'usso_v2_calendario_access_token',
+      'usso_v2_calendario_id_token',
+      'usso_v2_calendario_state',
+      'usso_v2_calendario_pkce_verifier'
     ].forEach((k) => {
       localStorage.removeItem(k);
       sessionStorage.removeItem(k);
@@ -352,6 +364,57 @@ export function dismissOneTap(): void {
   }
 }
 
+// ─── PKCE Storage Helpers Multi-Namespace ────────────────────────────────────
+function getStoredVerifier(): string | null {
+  if (typeof window === 'undefined') return null;
+  return (
+    sessionStorage.getItem(KEY_VERIFIER) ||
+    localStorage.getItem(KEY_VERIFIER) ||
+    sessionStorage.getItem('usso_pkce_verifier_v5') ||
+    sessionStorage.getItem('usso_code_verifier') ||
+    sessionStorage.getItem('usso_verifier') ||
+    localStorage.getItem('usso_pkce_verifier_v5') ||
+    sessionStorage.getItem('usso_v2_calendario_pkce_verifier') ||
+    localStorage.getItem('usso_v2_calendario_pkce_verifier') ||
+    null
+  );
+}
+
+function getStoredState(): string | null {
+  if (typeof window === 'undefined') return null;
+  return (
+    sessionStorage.getItem(KEY_STATE) ||
+    localStorage.getItem(KEY_STATE) ||
+    sessionStorage.getItem('usso_auth_state_v5') ||
+    sessionStorage.getItem('usso_pkce_state_v5') ||
+    sessionStorage.getItem('usso_oauth_state') ||
+    sessionStorage.getItem('usso_state') ||
+    sessionStorage.getItem('usso_v2_calendario_state') ||
+    localStorage.getItem('usso_v2_calendario_state') ||
+    null
+  );
+}
+
+function clearStoredVerifierAndState(): void {
+  if (typeof window === 'undefined') return;
+  [
+    KEY_VERIFIER,
+    KEY_STATE,
+    'usso_pkce_verifier_v5',
+    'usso_code_verifier',
+    'usso_verifier',
+    'usso_auth_state_v5',
+    'usso_pkce_state_v5',
+    'usso_oauth_state',
+    'usso_state',
+    'usso_v2_calendario_state',
+    'usso_v2_calendario_pkce_verifier'
+  ].forEach((k) => {
+    localStorage.removeItem(k);
+    sessionStorage.removeItem(k);
+  });
+}
+
 // ─── Flusso Login (Popup in Iframe, Redirect su App Schermo Intero) ─────────
 export async function login(loginHint?: string): Promise<void> {
   // Nel modulo incorporato (iframe) usiamo solo finestra popup per non rompere la pagina ospite
@@ -367,6 +430,22 @@ export async function login(loginHint?: string): Promise<void> {
     throw new Error('USSO_POPUP_REQUIRED');
   }
 
+  // Prepara preventivamente i parametri PKCE in tutti gli storage condivisi
+  const verifier = await generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
+  const state = generateState();
+
+  localStorage.setItem(KEY_VERIFIER, verifier);
+  localStorage.setItem(KEY_STATE, state);
+  sessionStorage.setItem(KEY_VERIFIER, verifier);
+  sessionStorage.setItem(KEY_STATE, state);
+  sessionStorage.setItem('usso_pkce_verifier_v5', verifier);
+  sessionStorage.setItem('usso_code_verifier', verifier);
+  sessionStorage.setItem('usso_verifier', verifier);
+  sessionStorage.setItem('usso_auth_state_v5', state);
+  sessionStorage.setItem('usso_oauth_state', state);
+  sessionStorage.setItem('usso_state', state);
+
   // Sull'app a schermo intero prioritario l'SDK redirect
   if (typeof window !== 'undefined' && window.USSO?.login) {
     try {
@@ -378,15 +457,6 @@ export async function login(loginHint?: string): Promise<void> {
   }
 
   // Fallback manuale PKCE S256 (RFC 7636)
-  const verifier = await generateCodeVerifier();
-  const challenge = await generateCodeChallenge(verifier);
-  const state = generateState();
-
-  localStorage.setItem(KEY_VERIFIER, verifier);
-  localStorage.setItem(KEY_STATE, state);
-  sessionStorage.setItem(KEY_VERIFIER, verifier);
-  sessionStorage.setItem(KEY_STATE, state);
-
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: USSO_CLIENT_ID,
@@ -416,28 +486,35 @@ export async function handleCallback(): Promise<UssoUser | null> {
 
     if (!code) return null;
 
-    const savedState = localStorage.getItem(KEY_STATE) || sessionStorage.getItem(KEY_STATE);
-    const verifier = localStorage.getItem(KEY_VERIFIER) || sessionStorage.getItem(KEY_VERIFIER);
-
-    // Pulisce la barra dell'indirizzo dal code usa-e-getta
-    window.history.replaceState({}, document.title, window.location.pathname);
+    const savedState = getStoredState();
+    const verifier = getStoredVerifier();
 
     if (savedState && returnedState && savedState !== returnedState) {
       console.error('[USSO] State mismatch — possibile attacco CSRF.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      clearStoredVerifierAndState();
       return null;
     }
 
     if (!verifier) {
       const existing = getUser();
-      if (existing) return existing;
+      if (existing) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return existing;
+      }
+      // Se l'utente non ha verifier locale ma una sessione OIDC o One-Tap è attiva
+      if (window.USSO?.isAuthenticated?.()) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return getUser();
+      }
+      window.history.replaceState({}, document.title, window.location.pathname);
       console.warn('[USSO] Verifier PKCE non trovato.');
       return null;
     }
 
-    localStorage.removeItem(KEY_STATE);
-    localStorage.removeItem(KEY_VERIFIER);
-    sessionStorage.removeItem(KEY_STATE);
-    sessionStorage.removeItem(KEY_VERIFIER);
+    // Pulisce la barra dell'indirizzo dal code usa-e-getta
+    window.history.replaceState({}, document.title, window.location.pathname);
+    clearStoredVerifierAndState();
 
     try {
       // Scambio codice con token prioritario su USSO_API, fallback su USSO_PORTAL
@@ -479,16 +556,21 @@ export async function handleCallback(): Promise<UssoUser | null> {
 
       localStorage.setItem(KEY_ACCESS_TOKEN, access_token);
       localStorage.setItem('usso_access_token', access_token);
+      localStorage.setItem('usso_v2_calendario_access_token', access_token);
 
       if (id_token) {
         localStorage.setItem(KEY_ID_TOKEN, id_token);
         localStorage.setItem('usso_id_token', id_token);
+        localStorage.setItem('usso_v2_calendario_id_token', id_token);
       }
 
       const user = parseIdToken(id_token) ?? (await fetchUserInfo(access_token));
       if (user) {
         localStorage.setItem(KEY_USER, JSON.stringify(user));
         localStorage.setItem('usso_user', JSON.stringify(user));
+        localStorage.setItem('usso_active_user_v5', JSON.stringify(user));
+        sessionStorage.setItem('usso_active_user_v5', JSON.stringify(user));
+        localStorage.setItem('usso_v2_calendario_user', JSON.stringify(user));
       }
 
       return user;

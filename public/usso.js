@@ -245,9 +245,7 @@
       picture: idClaims.picture || '',
       idToken: tokens.id_token,
       accessToken: tokens.access_token,
-      grantedClaims: (idClaims.granted_claims || (tokens.scope ? tokens.scope.split(' ') : [])).includes('taccuinoPostit')
-        ? (idClaims.granted_claims || (tokens.scope ? tokens.scope.split(' ') : []))
-        : [...(idClaims.granted_claims || (tokens.scope ? tokens.scope.split(' ') : [])), 'taccuinoPostit'],
+      grantedClaims: idClaims.granted_claims || (tokens.scope ? tokens.scope.split(' ') : []),
       ucoinWallet: idClaims.ucoin_wallet || null
     };
 
@@ -263,9 +261,9 @@
       localStorage.setItem('usso_user', JSON.stringify(currentUser));
       localStorage.setItem('usso_access_token', tokens.access_token);
       if (tokens.id_token) localStorage.setItem('usso_id_token', tokens.id_token);
-      localStorage.setItem('usso_v2_taccuino_user', JSON.stringify(currentUser));
-      localStorage.setItem('usso_v2_taccuino_access_token', tokens.access_token);
-      if (tokens.id_token) localStorage.setItem('usso_v2_taccuino_id_token', tokens.id_token);
+      localStorage.setItem('usso_v2_calendario_user', JSON.stringify(currentUser));
+      localStorage.setItem('usso_v2_calendario_access_token', tokens.access_token);
+      if (tokens.id_token) localStorage.setItem('usso_v2_calendario_id_token', tokens.id_token);
     } catch (_) {}
 
     // Salva nel Vault Locale Sovrano per aggiornare la presenza del profilo sul dispositivo (Air-Gap)
@@ -503,11 +501,13 @@
     const storedState = sessionStorage.getItem(STORAGE_STATE_KEY) 
       || sessionStorage.getItem('usso_oauth_state') 
       || sessionStorage.getItem('usso_state') 
-      || localStorage.getItem('usso_v2_taccuino_state');
+      || sessionStorage.getItem('usso_v2_calendario_state')
+      || localStorage.getItem('usso_v2_calendario_state');
     const codeVerifier = sessionStorage.getItem(STORAGE_VERIFIER_KEY) 
       || sessionStorage.getItem('usso_code_verifier') 
       || sessionStorage.getItem('usso_verifier') 
-      || localStorage.getItem('usso_v2_taccuino_pkce_verifier');
+      || sessionStorage.getItem('usso_v2_calendario_pkce_verifier')
+      || localStorage.getItem('usso_v2_calendario_pkce_verifier');
 
     // Se lo state non corrisponde o non c'è il verifier PKCE, ignora (evita CSRF)
     if (!storedState || (state && storedState !== state) || !codeVerifier) {
@@ -548,12 +548,14 @@
     sessionStorage.setItem('usso_code_verifier', codeVerifier);
     sessionStorage.setItem('usso_state', state);
     sessionStorage.setItem('usso_verifier', codeVerifier);
+    sessionStorage.setItem('usso_v2_calendario_state', state);
+    sessionStorage.setItem('usso_v2_calendario_pkce_verifier', codeVerifier);
     if (opts.redirectUri) {
       sessionStorage.setItem('usso_redirect_uri', opts.redirectUri);
     }
     try {
-      localStorage.setItem('usso_v2_taccuino_state', state);
-      localStorage.setItem('usso_v2_taccuino_pkce_verifier', codeVerifier);
+      localStorage.setItem('usso_v2_calendario_state', state);
+      localStorage.setItem('usso_v2_calendario_pkce_verifier', codeVerifier);
     } catch (_) {}
 
     const authUrl = new URL(`${ISSUER}/authorize`);
@@ -1728,7 +1730,11 @@
 
       // 1. Tenta di recuperare sessione cached locale
       try {
-        const cached = sessionStorage.getItem(STORAGE_USER_KEY);
+        const cached =
+          sessionStorage.getItem(STORAGE_USER_KEY) ||
+          localStorage.getItem(STORAGE_USER_KEY) ||
+          localStorage.getItem('usso_user') ||
+          localStorage.getItem('usso_v2_calendario_user');
         if (cached) {
           currentUser = JSON.parse(cached);
           if (typeof config.onAuth === 'function') {
@@ -1886,16 +1892,9 @@
       let u = currentUser;
       if (!u) {
         try {
-          var saved = localStorage.getItem('usso_user');
+          var saved = localStorage.getItem('usso_user') || localStorage.getItem('usso_v2_calendario_user');
           if (saved) u = JSON.parse(saved);
         } catch (_) {}
-      }
-      if (u) {
-        if (!u.grantedClaims || !Array.isArray(u.grantedClaims)) {
-          u.grantedClaims = ['taccuinoPostit'];
-        } else if (!u.grantedClaims.includes('taccuinoPostit')) {
-          u.grantedClaims.push('taccuinoPostit');
-        }
       }
       return u;
     },
