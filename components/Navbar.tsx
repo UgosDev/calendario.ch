@@ -4,6 +4,7 @@ import { getDisplayName, getInitials } from '../services/ussoAuth';
 import { TEMA } from '../config';
 import { toggleTaccuinoBubble } from '../services/taccuinoBridge';
 import { Search, Plus, ChevronDown, X, Snowflake, List, Code2, User, StickyNote } from 'lucide-react';
+import { UssoBadgeIcon } from './UssoLogo';
 
 interface Props {
   currentView: ViewMode;
@@ -180,16 +181,29 @@ export const Navbar: React.FC<Props> = ({
         </button>
       )}
 
-      <button
-        type="button"
-        className="b-round b-avatar"
-        onClick={onOpenAccountModal}
-        aria-label={`Account USSO: ${getDisplayName(user)}, ${dotLabel}`}
-        title={`${getDisplayName(user)} · ${dotLabel}`}
-      >
-        {/^[A-Za-zÀ-ÿ]/.test(getInitials(user)) ? getInitials(user) : <User size={17} />}
-        <span className="b-dot" style={{ background: dot }} aria-hidden="true" />
-      </button>
+      {user ? (
+        <button
+          type="button"
+          className="b-round b-avatar"
+          onClick={onOpenAccountModal}
+          aria-label={`Account USSO: ${getDisplayName(user)}, ${dotLabel}`}
+          title={`${getDisplayName(user)} · ${dotLabel}`}
+        >
+          {/^[A-Za-zÀ-ÿ]/.test(getInitials(user)) ? getInitials(user) : <User size={17} />}
+          <span className="b-dot" style={{ background: dot }} aria-hidden="true" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onOpenAccountModal}
+          className="inline-flex items-center gap-2 h-10 px-3.5 rounded-full bg-[var(--cream)] hover:bg-[var(--paper)] text-[var(--ink)] border border-[var(--edge)] font-semibold text-xs transition-colors shadow-xs cursor-pointer"
+          title="Accedi con USSO (Passkey FIDO2)"
+        >
+          <UssoBadgeIcon className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline">Accedi con USSO</span>
+          <span className="sm:hidden">Accedi</span>
+        </button>
+      )}
 
       <button type="button" onClick={onOpenNewEvent} className="b-new">
         <Plus size={16} /> Nuovo

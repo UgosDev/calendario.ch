@@ -15,6 +15,7 @@ import { calculateFreeSlots } from '../services/calendarEngine';
 import { generateIcs, downloadFile } from '../services/vaultService';
 import { formatChf } from '../services/ucoinService';
 import { LegalModal } from './LegalModal';
+import { UssoBadgeIcon, UssoSecurityBadge } from './UssoLogo';
 import {
   Calendar,
   Clock,
@@ -434,8 +435,8 @@ export const PublicBookingView: React.FC<Props> = ({
             </label>
             <div className="p-3 rounded-xl bg-[var(--paper)] border border-[var(--line)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[var(--muted)]">
               <div className="flex items-center gap-2">
-                <ShieldCheck size={18} className="text-[var(--ink)] flex-shrink-0" />
-                <span>Trattamento conforme nLPD (RS 235.1). Nessun tracciamento.</span>
+                <UssoBadgeIcon className="w-4 h-4 shrink-0" />
+                <span>Trattamento conforme nLPD (RS 235.1). Nessun tracciamento Big Tech.</span>
               </div>
               <button
                 type="button"
@@ -479,6 +480,10 @@ export const PublicBookingView: React.FC<Props> = ({
           </button>
         </form>
       )}
+
+      <div className="mt-6 pt-4 border-t border-[var(--line)] flex items-center justify-center">
+        <UssoSecurityBadge text="Infrastruttura Sovrana USSO.ch • Datacenter Ginevra dc4-a" />
+      </div>
 
       <LegalModal isOpen={isLegalOpen} onClose={() => setIsLegalOpen(false)} />
     </div>

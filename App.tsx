@@ -41,6 +41,7 @@ import { EventModal } from './components/EventModal';
 import { BookingModal } from './components/BookingModal';
 import { SlotTypeModal } from './components/SlotTypeModal';
 import { UssoAccountModal } from './components/UssoAccountModal';
+import { UssoBadgeIcon } from './components/UssoLogo';
 
 // Icone
 import {
@@ -107,6 +108,13 @@ export default function App() {
       const p = new URLSearchParams(window.location.search);
       const pathSegments = window.location.pathname.replace(/^\/|\/$/g, '').split('/').filter(Boolean);
       const hasPathRoute = pathSegments.length > 0 && !pathSegments[0].includes('.') && pathSegments[0] !== 'index.html';
+
+      // Supporto embed completo per workspace UnHub come team-mate.space (TMS)
+      if (p.get('embed') === 'app' || p.get('source') === 'tms') {
+        const v = p.get('view') as ViewMode;
+        if (v && ['week', 'day', 'month', 'agenda', 'slots', 'embed'].includes(v)) return v;
+        return 'week';
+      }
 
       if (p.get('view') === 'pub' || p.get('embed') === '1' || p.get('embed') === 'true' || hasPathRoute) return 'pub';
       if (p.get('view') === 'slots') return 'slots';
@@ -275,9 +283,27 @@ export default function App() {
       showToast('Nota d\'incontro collegata da taccuino.ch');
     });
 
+    // Listener messaggi cross-satellite da team-mate.space (TMS)
+    const handleTmsMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'TMS_NAVIGATE_VIEW' && data.view) {
+        if (['week', 'day', 'month', 'agenda', 'slots', 'embed'].includes(data.view)) {
+          setCurrentView(data.view as ViewMode);
+        }
+      } else if (data.type === 'TMS_NEW_EVENT') {
+        setEditingEvent(null);
+        if (data.date) setModalInitialDate(data.date);
+        if (data.startMinutes) setModalInitialStart(data.startMinutes);
+        setIsEventModalOpen(true);
+      }
+    };
+    window.addEventListener('message', handleTmsMessage);
+
     return () => {
       cleanupUsso();
       cleanupBridge();
+      window.removeEventListener('message', handleTmsMessage);
     };
   }, []);
 
@@ -593,24 +619,25 @@ export default function App() {
 
         {/* Area Principale */}
         <main className="b-main">
-          {/* Banner per Utente non autenticato (Zero Dati Finti) */}
+          {/* Banner per Utente in sessione locale con UI ufficiale USSO */}
           {!user && (
-            <div className="mb-4 p-3.5 bg-[var(--paper)] border border-[var(--edge)] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2.5">
-                <ShieldCheck size={18} className="text-[var(--accent)] flex-shrink-0" />
+            <div className="mb-4 p-3.5 bg-[var(--paper)] border border-[var(--edge)] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
+              <div className="flex items-center gap-3">
+                <UssoBadgeIcon className="w-7 h-7 shrink-0 rounded-lg shadow-xs" />
                 <div>
-                  <b className="text-[var(--ink)] block">Benvenuto su calendario.ch</b>
+                  <b className="text-[var(--ink)] block">Sessione locale anonima • Nessun tracciamento</b>
                   <span className="text-[var(--muted)]">
-                    Nessun dato fittizio precaricato. Accedi con USSO (Passkey FIDO2) per gestire la tua agenda o crea subito i tuoi impegni e slot.
+                    Accedi con il tuo UnHub ID tramite USSO.ch (Passkey FIDO2) per sincronizzare il tuo profilo, o gestisci subito i tuoi impegni in locale.
                   </span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsAccountModalOpen(true)}
-                className="btn dark text-xs h-8 px-3 whitespace-nowrap self-start sm:self-auto"
+                className="btn dark text-xs h-8.5 px-3.5 whitespace-nowrap self-start sm:self-auto flex items-center gap-2"
               >
-                Accedi con USSO
+                <UssoBadgeIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>Accedi con USSO</span>
               </button>
             </div>
           )}

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { UssoUser } from '../types';
 import { getDisplayName, getUserSubtitle, getInitials, logout, login } from '../services/ussoAuth';
-import { ShieldCheck, LogOut, X, ExternalLink, Copy, Check, KeyRound, StickyNote } from 'lucide-react';
+import { ShieldCheck, LogOut, X, ExternalLink, Copy, Check, StickyNote } from 'lucide-react';
+import { UssoBadgeIcon, UssoLogo, UssoSecurityBadge } from './UssoLogo';
+import { UssoAuthButton } from './UssoAuthButton';
 
 interface Props {
   user: UssoUser | null;
@@ -24,12 +26,21 @@ export const UssoAccountModal: React.FC<Props> = ({ user, onClose }) => {
         {/* Intestazione Profilo Conforme a Direttiva USSO 6.6 */}
         <div className="dlg-head">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-xl bg-[var(--ink)] text-white flex items-center justify-center font-bold text-base shadow-sm">
-              {getInitials(user)}
-            </span>
+            {user ? (
+              <div className="relative">
+                <span className="w-11 h-11 rounded-xl bg-[var(--ink)] text-white flex items-center justify-center font-bold text-base shadow-xs">
+                  {getInitials(user)}
+                </span>
+                <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#36a9e1] border-2 border-white flex items-center justify-center">
+                  <UssoBadgeIcon className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            ) : (
+              <UssoBadgeIcon className="w-11 h-11 shrink-0 rounded-xl shadow-xs" />
+            )}
             <div>
-              <h2 id="dlg-usso-title" className="text-xl font-bold text-[var(--ink)]">
-                {user ? getDisplayName(user) : 'Account USSO'}
+              <h2 id="dlg-usso-title" className="text-xl font-bold text-[var(--ink)] flex items-center gap-2">
+                {user ? getDisplayName(user) : 'Accesso Sovrano USSO.ch'}
               </h2>
               <p className="text-xs text-[var(--muted)] m-0 font-medium">
                 {getUserSubtitle(user)}
@@ -48,9 +59,9 @@ export const UssoAccountModal: React.FC<Props> = ({ user, onClose }) => {
               <div className="p-4 rounded-xl border border-[var(--edge)] bg-[var(--paper)] flex flex-col gap-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5">
-                    <ShieldCheck size={16} className="text-[var(--accent)]" /> Identità Sovrana Attiva
+                    <UssoBadgeIcon className="w-4 h-4 shrink-0" /> Identità Sovrana Attiva
                   </span>
-                  <span className="text-[11px] font-semibold bg-[var(--accent)] text-white px-2.5 py-0.5 rounded-full">
+                  <span className="text-[11px] font-semibold bg-[#36a9e1] text-white px-2.5 py-0.5 rounded-full">
                     Passkey FIDO2
                   </span>
                 </div>
@@ -107,9 +118,11 @@ export const UssoAccountModal: React.FC<Props> = ({ user, onClose }) => {
                   href="https://usso.ch/account"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[var(--accent)] hover:underline font-medium"
+                  className="flex items-center gap-1.5 text-[var(--ink)] font-semibold hover:underline"
                 >
-                  Gestisci il tuo profilo su usso.ch <ExternalLink size={12} />
+                  <UssoBadgeIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span>Gestisci profilo su usso.ch</span>
+                  <ExternalLink size={12} />
                 </a>
                 <a
                   href="https://usso.ch/permissions"
@@ -117,34 +130,36 @@ export const UssoAccountModal: React.FC<Props> = ({ user, onClose }) => {
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[var(--muted)] hover:underline"
                 >
-                  Permessi concessi <ExternalLink size={12} />
+                  Permessi <ExternalLink size={12} />
                 </a>
               </div>
             </div>
           ) : (
-            /* Utente Ospite / Non Connesso */
-            <div className="p-5 rounded-xl border border-[var(--edge)] bg-[var(--paper)] text-center flex flex-col items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-[var(--cream)] border border-[var(--edge)] flex items-center justify-center text-[var(--ink)]">
-                <KeyRound size={22} />
+            /* Utente Ospite / Non Connesso con UI ufficiale USSO */
+            <div className="p-6 rounded-2xl border border-[var(--edge)] bg-[var(--paper)] text-center flex flex-col items-center gap-4">
+              <div className="flex items-center justify-center">
+                <UssoLogo variant="full" iconClassName="w-8 h-8" />
               </div>
+
               <div>
                 <h3 className="text-base font-bold text-[var(--ink)] mb-1">
                   Accesso Sovrano Senza Password
                 </h3>
-                <p className="text-xs text-[var(--muted)] max-w-sm m-0">
-                  Accedi con la tua Passkey biometrica FIDO2 (Touch ID, Face ID o chiave hardware) per gestire il tuo calendario e condividere i tuoi slot.
+                <p className="text-xs text-[var(--muted)] max-w-sm m-0 leading-relaxed">
+                  Autenticazione universale della galassia UnHub con Passkey FIDO2 biometrica (Touch ID, Face ID o chiave hardware). Zero Big Tech, zero cookie di terze parti, conforme a nLPD svizzera (RS 235.1).
                 </p>
               </div>
-              <button
-                type="button"
+
+              <UssoAuthButton
+                size="lg"
                 onClick={() => {
                   login();
                   onClose();
                 }}
-                className="btn dark text-xs h-9 px-4 flex items-center gap-2 mt-1"
-              >
-                <ShieldCheck size={15} /> Accedi con USSO (Passkey FIDO2)
-              </button>
+                className="w-full sm:w-auto min-w-[240px]"
+              />
+
+              <UssoSecurityBadge text="Secured by USSO.ch • Ginevra dc4-a" />
             </div>
           )}
 
