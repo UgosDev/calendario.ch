@@ -9,7 +9,7 @@ import {
   VaultSyncStatus
 } from './types';
 import { getInitialSovereignState } from './services/calendarSeed';
-import { initUsso, getUser } from './services/ussoAuth';
+import { initUsso, getUser, login } from './services/ussoAuth';
 import {
   fetchPublicSchedule,
   submitBookingRequest,
@@ -41,6 +41,8 @@ import { EventModal } from './components/EventModal';
 import { BookingModal } from './components/BookingModal';
 import { SlotTypeModal } from './components/SlotTypeModal';
 import { UssoAccountModal } from './components/UssoAccountModal';
+import { LegalModal } from './components/LegalModal';
+import { LandingPage } from './components/LandingPage';
 import { UssoBadgeIcon } from './components/UssoLogo';
 
 // Icone
@@ -135,6 +137,8 @@ export default function App() {
   const [editingSlotType, setEditingSlotType] = useState<SlotType | null>(null);
   const [isSlotTypeModalOpen, setIsSlotTypeModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'impressum' | 'terms'>('privacy');
 
   const [embedSlotId, setEmbedSlotId] = useState<string | undefined>();
   const [publicSlotId, setPublicSlotId] = useState<string | undefined>(() => {
@@ -484,15 +488,35 @@ export default function App() {
       new URLSearchParams(window.location.search).get('embed') === 'true'
     );
 
-    const ownerName = publicSchedule?.owner.name || calendarState.settings.owner;
+    const ownerName = publicSchedule?.owner.name || calendarState.settings.owner || 'Dimostrazione Sovrana';
     const availableTypes = publicSchedule?.slotTypes && publicSchedule.slotTypes.length > 0
       ? publicSchedule.slotTypes
       : calendarState.types;
 
+    const demoFallbackSlot: SlotType = {
+      id: 'demo-consulenza',
+      slug: 'consulenza',
+      name: 'Consulenza Sovrana',
+      duration: 30,
+      desc: 'Sessione dimostrativa di 30 minuti su calendario.ch protetta con nLPD svizzera.',
+      active: true,
+      priceChf: 0,
+      days: [1, 2, 3, 4, 5],
+      from: '09:00',
+      to: '18:00',
+      buffer: 10,
+      horizon: 14,
+      notice: 2,
+      confirm: 'auto',
+      place: 'video',
+      showInCal: true
+    };
+
     const targetSlot =
       availableTypes.find((t) => t.id === publicSlotId || t.slug === publicSlotId) ||
       availableTypes.find((t) => t.active) ||
-      availableTypes[0];
+      availableTypes[0] ||
+      (!user ? demoFallbackSlot : undefined);
 
     // Se abbiamo gli intervalli anonimizzati dal server, usiamo quelli per il calcolo degli slot liberi
     const activeEvents: CalendarEvent[] = publicSchedule?.busyIntervals
@@ -544,6 +568,60 @@ export default function App() {
           onClose={isEmbed ? undefined : () => setCurrentView('slots')}
           isEmbed={isEmbed}
         />
+      </div>
+    );
+  }
+
+  // ── Accesso Sovrano Obbligatorio: Non consentire l'uso di calendario.ch senza account USSO ──
+  if (!user) {
+    return (
+      <div className={`min-h-screen flex flex-col ${calendarState.settings.snow ? '' : 'no-snow'}`}>
+        <LandingPage
+          onLogin={() => {
+            login().catch(() => setIsAccountModalOpen(true));
+          }}
+          onPreviewBooking={() => setCurrentView('pub')}
+          onOpenLegal={(tab) => {
+            setLegalModalTab(tab);
+            setIsLegalModalOpen(true);
+          }}
+        />
+
+        {/* Modale Account Sovrano USSO */}
+        {isAccountModalOpen && (
+          <UssoAccountModal
+            user={user}
+            onClose={() => setIsAccountModalOpen(false)}
+          />
+        )}
+
+        {/* Modale Informativa Legale & nLPD */}
+        <LegalModal
+          isOpen={isLegalModalOpen}
+          onClose={() => setIsLegalModalOpen(false)}
+          defaultTab={legalModalTab}
+        />
+
+        {/* Notifiche Toast con Undo */}
+        {toastMessage && (
+          <div id="toast">
+            <div className="toast">
+              <span>{toastMessage}</span>
+              {undoAction && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    undoAction();
+                    setToastMessage(null);
+                    setUndoAction(null);
+                  }}
+                >
+                  Annulla
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -619,28 +697,6 @@ export default function App() {
 
         {/* Area Principale */}
         <main className="b-main">
-          {/* Banner per Utente in sessione locale con UI ufficiale USSO */}
-          {!user && (
-            <div className="mb-4 p-3.5 bg-[var(--paper)] border border-[var(--edge)] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
-              <div className="flex items-center gap-3">
-                <UssoBadgeIcon className="w-7 h-7 shrink-0 rounded-lg shadow-xs" />
-                <div>
-                  <b className="text-[var(--ink)] block">Sessione locale anonima • Nessun tracciamento</b>
-                  <span className="text-[var(--muted)]">
-                    Accedi con il tuo UnHub ID tramite USSO.ch (Passkey FIDO2) per sincronizzare il tuo profilo, o gestisci subito i tuoi impegni in locale.
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAccountModalOpen(true)}
-                className="btn dark text-xs h-8.5 px-3.5 whitespace-nowrap self-start sm:self-auto flex items-center gap-2"
-              >
-                <UssoBadgeIcon className="w-3.5 h-3.5 shrink-0" />
-                <span>Accedi con USSO</span>
-              </button>
-            </div>
-          )}
 
           {/* Visualizzazione Risultati Ricerca Globale */}
           {searchResults ? (
@@ -883,6 +939,13 @@ export default function App() {
           onClose={() => setIsAccountModalOpen(false)}
         />
       )}
+
+      {/* Modale Informativa Legale & nLPD */}
+      <LegalModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        defaultTab={legalModalTab}
+      />
 
       {/* Notifiche Toast con Undo */}
       {toastMessage && (
