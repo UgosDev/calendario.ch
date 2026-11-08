@@ -14,6 +14,7 @@ import {
 import { calculateFreeSlots } from '../services/calendarEngine';
 import { generateIcs, downloadFile } from '../services/vaultService';
 import { formatChf, formatUcoin } from '../services/ucoinService';
+import { LegalModal } from './LegalModal';
 import {
   Calendar,
   Clock,
@@ -31,6 +32,15 @@ interface Props {
   events: any[];
   bookings: Booking[];
   onBookingCreated: (b: Booking) => void;
+  onAsyncBooking?: (payload: {
+    typeId: string;
+    date: string;
+    start: number;
+    name: string;
+    email: string;
+    phone?: string;
+    note?: string;
+  }) => Promise<{ success: boolean; booking?: Booking; error?: string }>;
   onClose?: () => void;
   isEmbed?: boolean;
 }
@@ -43,6 +53,7 @@ export const PublicBookingView: React.FC<Props> = ({
   events,
   bookings,
   onBookingCreated,
+  onAsyncBooking,
   onClose,
   isEmbed = false
 }) => {
@@ -67,14 +78,16 @@ export const PublicBookingView: React.FC<Props> = ({
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Step di conferma
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
 
   const freeSlotsForDate = calculateFreeSlots(selectedDate, slotType, events, bookings);
   const selectedDateObj = parseKey(selectedDate);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Inserisci il tuo nome e cognome.');
@@ -89,6 +102,36 @@ export const PublicBookingView: React.FC<Props> = ({
       return;
     }
 
+    setError('');
+    setIsSubmitting(true);
+
+    if (onAsyncBooking) {
+      try {
+        const res = await onAsyncBooking({
+          typeId: slotType.id,
+          date: selectedDate,
+          start: selectedTime,
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim() || undefined,
+          note: note.trim() || undefined
+        });
+
+        if (res.success && res.booking) {
+          onBookingCreated(res.booking);
+          setConfirmedBooking(res.booking);
+        } else {
+          setError(res.error || 'Impossibile completare la prenotazione. Riprova.');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Errore imprevisto durante la prenotazione.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // Fallback locale / offline
     const newBooking: Booking = {
       id: uid(),
       typeId: slotType.id,
@@ -101,12 +144,13 @@ export const PublicBookingView: React.FC<Props> = ({
       note: note.trim(),
       status: slotType.confirm === 'manual' ? 'pending' : 'confirmed',
       priceChf: slotType.priceChf || 0,
-      isPaid: Boolean(slotType.priceChf),
+      isPaid: !slotType.priceChf, // Gratuito = pagato; per slot a pagamento il checkout viene gestito alla conferma
       created: new Date().toISOString()
     };
 
     onBookingCreated(newBooking);
     setConfirmedBooking(newBooking);
+    setIsSubmitting(false);
   };
 
   const handleDownloadIcs = () => {
@@ -369,9 +413,18 @@ export const PublicBookingView: React.FC<Props> = ({
                 placeholder="+41 79 123 45 67"
               />
             </label>
-            <div className="p-3 rounded-xl bg-[var(--paper)] border border-[var(--line)] flex items-center gap-2 text-xs text-[var(--muted)]">
-              <ShieldCheck size={18} className="text-[var(--ink)] flex-shrink-0" />
-              <span>Conformità nLPD: i tuoi dati non verranno mai ceduti o tracciati.</span>
+            <div className="p-3 rounded-xl bg-[var(--paper)] border border-[var(--line)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[var(--muted)]">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-[var(--ink)] flex-shrink-0" />
+                <span>Trattamento conforme nLPD (RS 235.1). Nessun tracciamento.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLegalOpen(true)}
+                className="text-[var(--accent)] underline text-[11px] hover:text-[var(--accent-hover)] text-left sm:text-right"
+              >
+                Informativa & Impressum
+              </button>
             </div>
           </div>
 
@@ -386,16 +439,29 @@ export const PublicBookingView: React.FC<Props> = ({
             />
           </label>
 
+          {error && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium text-left">
+              {error}
+            </div>
+          )}
+
           <button
             type="submit"
-            className="btn big red w-full mt-2 font-bold shadow-md flex items-center justify-center gap-2"
+            disabled={isSubmitting}
+            className="btn big red w-full mt-2 font-bold shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {slotType.confirm === 'manual'
-              ? 'Invia Richiesta di Prenotazione'
-              : `Conferma Prenotazione alle ${formatMinutesToClock(selectedTime)}`}
+            {isSubmitting ? (
+              <span>Registrazione in corso...</span>
+            ) : slotType.confirm === 'manual' ? (
+              'Invia Richiesta di Prenotazione'
+            ) : (
+              `Conferma Prenotazione alle ${formatMinutesToClock(selectedTime)}`
+            )}
           </button>
         </form>
       )}
+
+      <LegalModal isOpen={isLegalOpen} onClose={() => setIsLegalOpen(false)} />
     </div>
   );
 };

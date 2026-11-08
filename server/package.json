@@ -1,0 +1,16 @@
+{
+  "name": "calendario-server",
+  "version": "1.0.0",
+  "description": "Server Sovrano di Scheduling per calendario.ch (Infrastruttura Infomaniak dc4-a)",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "nodemailer": "^6.9.16"
+  }
+}

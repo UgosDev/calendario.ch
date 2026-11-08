@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /?view=week
+Disallow: /?view=day
+Disallow: /?view=month
+Disallow: /?view=agenda
+
+Sitemap: https://calendario.ch/sitemap.xml

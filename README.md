@@ -12,9 +12,9 @@
   - Riconoscimento dell'`unhubId` univoco e stabile.
   - Zero password su server, protezione totale da phishing e furto d'identità.
 - 🗄️ **User-Owned Storage con Archivio.ch (Ginevra dc4-a)**:
-  - Nessun database proprietario opaco: i tuoi appuntamenti, le disponibilità e i clienti risiedono nel tuo caveau cifrato.
+  - Nessun database proprietario opaco: i tuoi appuntamenti, le disponibilità e i clienti risiedono nel tuo caveau conforme nLPD e CO art. 958f.
   - Conforme al Codice delle Obbligazioni (CO art. 958f), GeBüV e Nuova Legge Federale sulla Protezione dei Dati (nLPD).
-  - Hash probatorio SHA-256 generato client-side e sincronizzazione bidirezionale offline-first.
+  - Hash probatorio SHA-256 generato client-side e sincronizzazione cloud sovrana.
 - 📋 **Ponte Diretto con taccuino.ch**:
   - Su ogni evento o prenotazione: pulsante per aprire o generare direttamente un appunto/verbale formattato in Markdown con partecipanti, data, orari e ordine del giorno.
   - Supporto per deeplinking e sincronizzazione cross-satellite via PostMessage.
@@ -39,7 +39,7 @@
 - **Bundler**: Vite 6
 - **Styling**: Tailwind CSS v4 con CSS Variables editoriali svizzere
 - **Iconografia**: Lucide React
-- **Crittografia & Privacy**: WebCrypto API nativa (SHA-256, AES-256 client-side)
+- **Integrità & Privacy**: WebCrypto API nativa (SHA-256 probatorio CO 958f / nLPD)
 
 ---
 

@@ -40,11 +40,11 @@ export interface UcoinWalletInfo {
 export async function fetchUcoinWallet(user: UssoUser | null): Promise<UcoinWalletInfo> {
   if (!user) {
     return {
-      balance: 100,
-      balanceChf: 10.0,
-      formatted: '100 UCOIN',
+      balance: 0,
+      balanceChf: 0,
+      formatted: '0 UCOIN',
       unhubId: 'ospite',
-      tier: 'Sovereign Free',
+      tier: 'Ospite (Non autenticato)',
       status: 'active'
     };
   }
@@ -55,10 +55,11 @@ export async function fetchUcoinWallet(user: UssoUser | null): Promise<UcoinWall
     });
     if (res.ok) {
       const data = await res.json();
+      const bal = typeof data.balance === 'number' ? data.balance : 0;
       return {
-        balance: data.balance ?? 150,
-        balanceChf: ucoinToChf(data.balance ?? 150),
-        formatted: formatUcoin(data.balance ?? 150),
+        balance: bal,
+        balanceChf: ucoinToChf(bal),
+        formatted: formatUcoin(bal),
         unhubId: user.unhubId,
         tier: data.tier || 'Sovereign Active',
         status: 'active'
@@ -69,12 +70,12 @@ export async function fetchUcoinWallet(user: UssoUser | null): Promise<UcoinWall
   }
 
   return {
-    balance: 150,
-    balanceChf: 15.0,
-    formatted: '150 UCOIN',
+    balance: 0,
+    balanceChf: 0,
+    formatted: '0 UCOIN',
     unhubId: user.unhubId,
-    tier: 'Sovereign Active',
-    status: 'active'
+    tier: 'Sovereign (Non raggiungibile)',
+    status: 'pending'
   };
 }
 

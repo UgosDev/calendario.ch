@@ -118,16 +118,57 @@ export async function syncStateToVault(
         syncedAt: now
       };
     }
-  } catch (e: any) {
-    console.warn('[Archivio.ch] Sincronizzazione in background memorizzata localmente:', e.message);
-  }
 
-  // Fallback offline resiliente conforme a nLPD
-  return {
-    success: true,
-    hash: sha256Hash,
-    syncedAt: now
-  };
+    const errText = await res.text().catch(() => res.statusText);
+    return {
+      success: false,
+      error: `Archivio.ch HTTP ${res.status}: ${errText}`
+    };
+  } catch (e: any) {
+    console.warn('[Archivio.ch] Sincronizzazione fallita:', e.message);
+    return {
+      success: false,
+      error: e.message || 'Impossibile raggiungere Archivio.ch (modalità offline)'
+    };
+  }
+}
+
+/**
+ * Recupera lo stato sovrano dell'agenda dal Caveau di Archivio.ch
+ */
+export async function fetchStateFromVault(
+  user: UssoUser
+): Promise<{ success: boolean; state?: SovereignCalendarState; error?: string }> {
+  try {
+    const objectPath = encodeURIComponent(`apps/calendario/calendar-${user.unhubId}.json`);
+    const endpoint = `${getVaultEndpoint()}?unhubId=${encodeURIComponent(user.unhubId)}&objectPath=${objectPath}`;
+    const res = await fetch(endpoint, {
+      method: 'GET',
+      headers: getUssoHeaders()
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const rawContent = data.content || data;
+      const parsedState = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+      return {
+        success: true,
+        state: parsedState
+      };
+    } else if (res.status === 404) {
+      return { success: true, state: undefined }; // Primo accesso o nessun dato remoto
+    }
+
+    return {
+      success: false,
+      error: `Archivio.ch HTTP ${res.status}`
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      error: e.message || 'Impossibile leggere da Archivio.ch'
+    };
+  }
 }
 
 /**

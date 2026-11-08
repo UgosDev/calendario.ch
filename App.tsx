@@ -10,7 +10,13 @@ import {
 } from './types';
 import { getInitialSovereignState } from './services/calendarSeed';
 import { initUsso, getUser } from './services/ussoAuth';
-import { syncStateToVault, fetchVaultQuota } from './services/vaultService';
+import { syncStateToVault, fetchStateFromVault, fetchVaultQuota } from './services/vaultService';
+import {
+  fetchPublicSchedule,
+  submitBookingRequest,
+  syncOwnerSchedulesAndBookings,
+  PublicScheduleData
+} from './services/bookingClient';
 import { initCrossSatelliteBridge } from './services/taccuinoBridge';
 import {
   keyFromDate,
@@ -118,6 +124,8 @@ export default function App() {
     return undefined;
   });
 
+  const [publicSchedule, setPublicSchedule] = useState<PublicScheduleData | null>(null);
+
   // ── 6. Notifiche Toast con Undo ──
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [undoAction, setUndoAction] = useState<(() => void) | null>(null);
@@ -133,7 +141,7 @@ export default function App() {
     }, undo ? 7000 : 3500);
   };
 
-  // ── 7. Salvataggio in LocalStorage & Sincronizzazione con Archivio.ch ──
+  // ── 7. Salvataggio in LocalStorage & Sincronizzazione con Archivio.ch & Server ──
   const saveState = (newState: SovereignCalendarState, actionLabel?: string) => {
     const prevStateSnapshot = JSON.stringify(calendarState);
     setCalendarState(newState);
@@ -150,10 +158,33 @@ export default function App() {
       setSyncStatus((prev) => ({
         ...prev,
         state: res.success ? 'synced' : 'error',
-        lastSyncedAt: res.syncedAt,
-        sha256Hash: res.hash
+        lastSyncedAt: res.syncedAt || prev.lastSyncedAt,
+        sha256Hash: res.hash || prev.sha256Hash,
+        error: res.error
       }));
     });
+
+    // Se il proprietario ha configurato un handle, sincronizza gli slot con il server di disponibilità
+    if (newState.settings.handle) {
+      syncOwnerSchedulesAndBookings(
+        newState.settings.handle,
+        newState.types,
+        newState.events,
+        newState.bookings
+      ).then((res) => {
+        if (res.success && res.remoteBookings.length > 0) {
+          const existingIds = new Set(newState.bookings.map((b) => b.id));
+          const brandNew = res.remoteBookings.filter((b) => !existingIds.has(b.id));
+          if (brandNew.length > 0) {
+            setCalendarState((curr) => ({
+              ...curr,
+              bookings: [...brandNew, ...curr.bookings]
+            }));
+            showToast(`${brandNew.length} nuova/e prenotazione/i ricevuta/e`);
+          }
+        }
+      });
+    }
 
     if (actionLabel) {
       showToast(actionLabel, () => {
@@ -165,6 +196,23 @@ export default function App() {
       });
     }
   };
+
+  // Caricamento disponibilità pubblica se in vista 'pub'
+  useEffect(() => {
+    if (currentView === 'pub') {
+      const p = new URLSearchParams(window.location.search);
+      const pathSegments = window.location.pathname.replace(/^\/|\/$/g, '').split('/').filter(Boolean);
+      const pathHandle = pathSegments.length > 0 && !pathSegments[0].includes('.') && pathSegments[0] !== 'index.html' ? pathSegments[0] : null;
+      const h = p.get('handle') || pathHandle || calendarState.settings.handle;
+      if (h) {
+        fetchPublicSchedule(h).then((res) => {
+          if (res) {
+            setPublicSchedule(res);
+          }
+        });
+      }
+    }
+  }, [currentView, calendarState.settings.handle]);
 
   // ── 8. Lifecycle USSO & Cross-Satellite taccuino.ch ──
   useEffect(() => {
@@ -203,6 +251,16 @@ export default function App() {
     const cleanupUsso = initUsso(
       (authUsr) => {
         setUser(authUsr);
+        if (authUsr) {
+          fetchStateFromVault(authUsr).then((res) => {
+            if (res.success && res.state) {
+              setCalendarState(res.state);
+              try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(res.state));
+              } catch {}
+            }
+          });
+        }
         if (authUsr && authUsr.name) {
           setCalendarState((prev) => ({
             ...prev,
@@ -414,25 +472,57 @@ export default function App() {
       new URLSearchParams(window.location.search).get('embed') === 'true'
     );
 
+    const ownerName = publicSchedule?.owner.name || calendarState.settings.owner;
+    const availableTypes = publicSchedule?.slotTypes && publicSchedule.slotTypes.length > 0
+      ? publicSchedule.slotTypes
+      : calendarState.types;
+
     const targetSlot =
-      calendarState.types.find((t) => t.id === publicSlotId || t.slug === publicSlotId) ||
-      calendarState.types.find((t) => t.active) ||
-      calendarState.types[0];
+      availableTypes.find((t) => t.id === publicSlotId || t.slug === publicSlotId) ||
+      availableTypes.find((t) => t.active) ||
+      availableTypes[0];
+
+    // Se abbiamo gli intervalli anonimizzati dal server, usiamo quelli per il calcolo degli slot liberi
+    const activeEvents: CalendarEvent[] = publicSchedule?.busyIntervals
+      ? publicSchedule.busyIntervals.map((b, idx) => ({
+          id: `busy-srv-${idx}`,
+          title: 'Occupato',
+          date: b.date,
+          start: b.start,
+          end: b.end,
+          allDay: false,
+          repeat: 'none' as const,
+          busy: true
+        }))
+      : calendarState.events;
+
+    const activeBookings = publicSchedule ? [] : calendarState.bookings;
 
     return (
       <div className={isEmbed ? 'p-1 sm:p-2 bg-transparent flex flex-col justify-center' : 'min-h-screen bg-[var(--cream)] p-4 flex flex-col justify-center'}>
         <PublicBookingView
           slotType={targetSlot}
-          ownerName={calendarState.settings.owner}
-          events={calendarState.events}
-          bookings={calendarState.bookings}
+          ownerName={ownerName}
+          events={activeEvents}
+          bookings={activeBookings}
+          onAsyncBooking={async (payload) => {
+            const h = publicSchedule?.owner.handle || calendarState.settings.handle;
+            return await submitBookingRequest(h, payload);
+          }}
           onBookingCreated={(newBk) => {
             handleBookingCreatedByClient(newBk);
             try {
               if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+                // nLPD: non trasmettere PII (nome, email, telefono, note) a targetOrigin generico '*'
+                // Inviamo solo i metadati tecnici della prenotazione
                 window.parent.postMessage({
                   type: 'calendario:booking-created',
-                  booking: newBk
+                  bookingId: newBk.id,
+                  typeId: newBk.typeId,
+                  date: newBk.date,
+                  start: newBk.start,
+                  end: newBk.end,
+                  status: newBk.status
                 }, '*');
               }
             } catch (err) {

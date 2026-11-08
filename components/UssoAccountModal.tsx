@@ -87,12 +87,12 @@ export const UssoAccountModal: React.FC<Props> = ({ user, syncStatus, onClose, o
 
             <div className="text-xs text-[var(--muted)] space-y-1">
               <p className="m-0 flex items-center justify-between">
-                <span>Crittografia:</span>
-                <b className="text-[var(--ink)]">Client-side AES-256 (UNV1)</b>
+                <span>Integrità dati:</span>
+                <b className="text-[var(--ink)]">Hash SHA-256 (GeBüV / nLPD)</b>
               </p>
               <p className="m-0 flex items-center justify-between">
                 <span>Conformità legale:</span>
-                <b className="text-[var(--ink)]">CO art. 958f / nLPD</b>
+                <b className="text-[var(--ink)]">CO art. 958f / nLPD Svizzera</b>
               </p>
               {syncStatus.sha256Hash && (
                 <p className="m-0 flex items-center justify-between">
