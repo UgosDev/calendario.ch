@@ -10,7 +10,6 @@ import {
 } from './types';
 import { getInitialSovereignState } from './services/calendarSeed';
 import { initUsso, getUser } from './services/ussoAuth';
-import { syncStateToVault, fetchStateFromVault, fetchVaultQuota } from './services/vaultService';
 import {
   fetchPublicSchedule,
   submitBookingRequest,
@@ -159,7 +158,7 @@ export default function App() {
     }, undo ? 7000 : 3500);
   };
 
-  // ── 7. Salvataggio in LocalStorage & Sincronizzazione con Archivio.ch & Server ──
+  // ── 7. Salvataggio in LocalStorage & Sincronizzazione con Server di Prenotazione ──
   const saveState = (newState: SovereignCalendarState, actionLabel?: string) => {
     const prevStateSnapshot = JSON.stringify(calendarState);
     setCalendarState(newState);
@@ -169,18 +168,6 @@ export default function App() {
     } catch (e) {
       console.warn('[LocalStorage] Errore salvataggio:', e);
     }
-
-    // Sincronizza nel caveau di Archivio.ch
-    setSyncStatus((prev) => ({ ...prev, state: 'syncing' }));
-    syncStateToVault(newState, user).then((res) => {
-      setSyncStatus((prev) => ({
-        ...prev,
-        state: res.success ? 'synced' : 'error',
-        lastSyncedAt: res.syncedAt || prev.lastSyncedAt,
-        sha256Hash: res.hash || prev.sha256Hash,
-        error: res.error
-      }));
-    });
 
     // Se il proprietario ha configurato un handle, sincronizza gli slot con il server di disponibilità
     if (newState.settings.handle) {
@@ -209,7 +196,6 @@ export default function App() {
         const restored = JSON.parse(prevStateSnapshot);
         setCalendarState(restored);
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(restored));
-        syncStateToVault(restored, user);
         showToast('Azione annullata con successo');
       });
     }
@@ -269,16 +255,6 @@ export default function App() {
     const cleanupUsso = initUsso(
       (authUsr) => {
         setUser(authUsr);
-        if (authUsr) {
-          fetchStateFromVault(authUsr).then((res) => {
-            if (res.success && res.state) {
-              setCalendarState(res.state);
-              try {
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(res.state));
-              } catch {}
-            }
-          });
-        }
         if (authUsr && authUsr.name) {
           setCalendarState((prev) => ({
             ...prev,
@@ -297,14 +273,6 @@ export default function App() {
 
     const cleanupBridge = initCrossSatelliteBridge((refId, noteId) => {
       showToast('Nota d\'incontro collegata da taccuino.ch');
-    });
-
-    fetchVaultQuota().then((q) => {
-      setSyncStatus((prev) => ({
-        ...prev,
-        quotaUsedBytes: q.usedBytes,
-        quotaTotalBytes: q.totalBytes
-      }));
     });
 
     return () => {
@@ -633,7 +601,7 @@ export default function App() {
                 <div>
                   <b className="text-[var(--ink)] block">Benvenuto su calendario.ch</b>
                   <span className="text-[var(--muted)]">
-                    Nessun dato fittizio precaricato. Accedi con USSO (Passkey FIDO2) per sincronizzare il tuo caveau sovrano su Archivio.ch o crea i tuoi primi impegni.
+                    Nessun dato fittizio precaricato. Accedi con USSO (Passkey FIDO2) per gestire la tua agenda o crea subito i tuoi impegni e slot.
                   </span>
                 </div>
               </div>
@@ -881,13 +849,11 @@ export default function App() {
         />
       )}
 
-      {/* Modale Account USSO & Archivio.ch */}
+      {/* Modale Account USSO */}
       {isAccountModalOpen && (
         <UssoAccountModal
           user={user}
-          syncStatus={syncStatus}
           onClose={() => setIsAccountModalOpen(false)}
-          onForceSync={() => saveState(calendarState, 'Sincronizzazione forzata completata')}
         />
       )}
 

@@ -76,10 +76,8 @@ export const Navbar: React.FC<Props> = ({
   ];
   const extraActive = extra.some((x) => x.mode === currentView);
 
-  const dot =
-    syncStatus.state === 'synced' ? '#2f8a57' : syncStatus.state === 'syncing' ? '#c98a12' : '#a19e95';
-  const dotLabel =
-    syncStatus.state === 'synced' ? 'archivio sincronizzato' : syncStatus.state === 'syncing' ? 'sincronizzazione in corso' : 'archivio non sincronizzato';
+  const dot = user ? '#2f8a57' : '#a19e95';
+  const dotLabel = user ? 'connesso con USSO' : 'sessione locale anonima';
 
   return (
     <header className="b-top">

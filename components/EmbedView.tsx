@@ -345,8 +345,7 @@ export const EmbedView: React.FC<Props> = ({
                     </select>
                   </label>
                   <p className="text-[11px] text-[var(--muted)] m-0">
-                    Gli orari arrivano istantaneamente da <b>calendario.ch</b> e le
-                    richieste sono sincronizzate nel Caveau di <b>Archivio.ch</b>.
+                    Gli orari e le disponibilità arrivano istantaneamente da <b>calendario.ch</b> in modo sicuro.
                   </p>
                 </aside>
               </div>

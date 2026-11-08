@@ -100,7 +100,7 @@ export const BookingModal: React.FC<Props> = ({
                 <CreditCard size={15} className="text-[var(--gold)]" />
                 <span>Tariffa: {formatChf(booking.priceChf)}</span>
                 <span className="text-[11px] text-[var(--muted)]">
-                  {booking.isPaid ? '• Pagato con TWINT / UCOIN' : '• Da saldare'}
+                  {booking.isPaid ? '• Pagato' : '• Da saldare'}
                 </span>
               </div>
             ) : null}

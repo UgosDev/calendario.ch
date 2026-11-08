@@ -6,7 +6,7 @@ import {
   GIORNI_BREVI_IT
 } from '../services/swissHolidays';
 import { findNextFreeSlot } from '../services/calendarEngine';
-import { formatChf, formatUcoin } from '../services/ucoinService';
+import { formatChf } from '../services/ucoinService';
 import { openMeetingNoteInTaccuino } from '../services/taccuinoBridge';
 import {
   Plus,
@@ -158,10 +158,7 @@ export const SlotsView: React.FC<Props> = ({
                     <>
                       <dt>Tariffa</dt>
                       <dd className="font-bold text-[var(--ink)]">
-                        {formatChf(t.priceChf)}{' '}
-                        <span className="font-normal text-[var(--gold)]">
-                          ({formatUcoin(t.priceUcoin || 0)})
-                        </span>
+                        {formatChf(t.priceChf)}
                       </dd>
                     </>
                   ) : null}

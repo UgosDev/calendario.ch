@@ -1,33 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { UssoUser, VaultSyncStatus } from '../types';
+import React, { useState } from 'react';
+import { UssoUser } from '../types';
 import { getDisplayName, getUserSubtitle, getInitials, logout, login } from '../services/ussoAuth';
-import { fetchVaultQuota } from '../services/vaultService';
-import { fetchUcoinWallet, UcoinWalletInfo, formatChf } from '../services/ucoinService';
-import { ShieldCheck, Database, Wallet, LogOut, X, ExternalLink, RefreshCw, Copy, Check } from 'lucide-react';
+import { ShieldCheck, LogOut, X, ExternalLink, Copy, Check, KeyRound, StickyNote } from 'lucide-react';
 
 interface Props {
   user: UssoUser | null;
-  syncStatus: VaultSyncStatus;
   onClose: () => void;
-  onForceSync: () => void;
 }
 
-export const UssoAccountModal: React.FC<Props> = ({ user, syncStatus, onClose, onForceSync }) => {
-  const [wallet, setWallet] = useState<UcoinWalletInfo | null>(null);
+export const UssoAccountModal: React.FC<Props> = ({ user, onClose }) => {
   const [copiedId, setCopiedId] = useState(false);
-  const [quota, setQuota] = useState<{ usedBytes: number; totalBytes: number }>({
-    usedBytes: syncStatus.quotaUsedBytes || 154200,
-    totalBytes: syncStatus.quotaTotalBytes || 1073741824
-  });
-
-  useEffect(() => {
-    fetchUcoinWallet(user).then(setWallet);
-    fetchVaultQuota().then(setQuota);
-  }, [user]);
-
-  const usedKb = (quota.usedBytes / 1024).toFixed(1);
-  const totalMb = (quota.totalBytes / (1024 * 1024)).toFixed(0);
-  const percent = Math.min(100, Math.max(1, Math.round((quota.usedBytes / quota.totalBytes) * 100)));
 
   const handleCopyUnhubId = () => {
     if (!user?.unhubId) return;
@@ -38,7 +20,7 @@ export const UssoAccountModal: React.FC<Props> = ({ user, syncStatus, onClose, o
 
   return (
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="dialog wide" role="dialog" aria-labelledby="dlg-usso-title">
+      <div className="dialog" role="dialog" aria-labelledby="dlg-usso-title">
         {/* Intestazione Profilo Conforme a Direttiva USSO 6.6 */}
         <div className="dlg-head">
           <div className="flex items-center gap-3">
@@ -47,9 +29,8 @@ export const UssoAccountModal: React.FC<Props> = ({ user, syncStatus, onClose, o
             </span>
             <div>
               <h2 id="dlg-usso-title" className="text-xl font-bold text-[var(--ink)]">
-                {user ? getDisplayName(user) : 'Account Sovrano UnHub'}
+                {user ? getDisplayName(user) : 'Account USSO'}
               </h2>
-              {/* Direttiva 6.6: mostra email o nickname semantico come sottotitolo, MAI l'hash grezzo */}
               <p className="text-xs text-[var(--muted)] m-0 font-medium">
                 {getUserSubtitle(user)}
               </p>
@@ -60,174 +41,145 @@ export const UssoAccountModal: React.FC<Props> = ({ user, syncStatus, onClose, o
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-2">
-          {/* Box Archivio.ch Vault (Bunker Ginevra) */}
-          <div className="p-4 rounded-xl border border-[var(--edge)] bg-[var(--paper)] flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5">
-                <Database size={15} className="text-[var(--ink)]" /> Archivio.ch Vault
-              </span>
-              <span className="text-[11px] font-semibold bg-[var(--ink)] text-white px-2 py-0.5 rounded-full">
-                Bunker Ginevra dc4-a
-              </span>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs text-[var(--muted)] mb-1 font-medium">
-                <span>Spazio utilizzato: {usedKb} KB</span>
-                <span>Quota: {totalMb} MB (1 GB Free)</span>
-              </div>
-              <div className="w-full bg-[var(--line)] h-2 rounded-full overflow-hidden">
-                <div
-                  className="bg-[var(--ink)] h-full transition-all duration-300"
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="text-xs text-[var(--muted)] space-y-1">
-              <p className="m-0 flex items-center justify-between">
-                <span>Integrità dati:</span>
-                <b className="text-[var(--ink)]">Hash SHA-256 (GeBüV / nLPD)</b>
-              </p>
-              <p className="m-0 flex items-center justify-between">
-                <span>Conformità legale:</span>
-                <b className="text-[var(--ink)]">CO art. 958f / nLPD Svizzera</b>
-              </p>
-              {syncStatus.sha256Hash && (
-                <p className="m-0 flex items-center justify-between">
-                  <span>Hash probatorio:</span>
-                  <code className="text-[10px] text-[var(--ink)] font-mono">
-                    {syncStatus.sha256Hash.slice(0, 16)}...
-                  </code>
-                </p>
-              )}
-            </div>
-
-            <button
-              onClick={onForceSync}
-              className="btn line mt-auto h-9 text-xs flex items-center justify-center gap-1.5"
-            >
-              <RefreshCw size={13} className={syncStatus.state === 'syncing' ? 'animate-spin' : ''} />
-              Sincronizza ora con Archivio.ch
-            </button>
-          </div>
-
-          {/* Box Borsellino UCOIN & Identità (Direttiva 6.6) */}
-          <div className="p-4 rounded-xl border border-[var(--edge)] bg-[var(--paper)] flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5">
-                <Wallet size={15} className="text-[var(--gold)]" /> Borsellino UCOIN
-              </span>
-              <span className="text-[11px] font-semibold bg-[var(--gold)] text-white px-2 py-0.5 rounded-full">
-                Circuito Chiuso FINMA
-              </span>
-            </div>
-
-            {/* Saldo formattato come: X UCOIN ≈ CHF Y.YY (Direttiva 6.6) */}
-            <div className="bg-[var(--cream)] p-3 rounded-lg border border-[var(--line)]">
-              <span className="text-xs text-[var(--muted)] block font-medium">Saldo disponibile:</span>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-2xl font-bold text-[var(--ink)]">
-                  {wallet?.balance ?? 150} UCOIN
-                </span>
-                <span className="text-sm font-semibold text-[var(--gold)]">
-                  ≈ {formatChf(wallet?.balanceChf ?? 15.0)}
-                </span>
-              </div>
-              <p className="text-[11px] text-[var(--muted)] m-0 mt-1">
-                Tasso ufficiale garantito: 10 UCOIN = CHF 1.00. Zero commissioni interne.
-              </p>
-            </div>
-
-            {/* Identificativo unhubId in sezione dedicata con font monospace (Direttiva 6.6) */}
-            {user?.unhubId && (
-              <div className="p-2.5 bg-[var(--cream)] border border-[var(--line)] rounded-lg text-xs flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-[var(--muted)] block">
-                    Borsellino Sovrano (unhubId)
-                  </span>
-                  <code className="text-[11px] font-mono font-bold text-[var(--ink)]">
-                    {user.unhubId.slice(0, 10)}...{user.unhubId.slice(-6)}
-                  </code>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCopyUnhubId}
-                  className="icon-btn h-7 w-7 text-xs border border-[var(--edge)]"
-                  title="Copia UnHub ID completo"
-                >
-                  {copiedId ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                </button>
-              </div>
-            )}
-
-            {/* Link di Ritorno IdP & Ricarica UCOIN (Direttiva 6.6) */}
-            <div className="flex items-center justify-between pt-1 text-xs">
-              <a
-                href="https://usso.ch"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[var(--ink)] font-bold hover:underline inline-flex items-center gap-1"
-              >
-                Gestisci l'account USSO <ExternalLink size={12} />
-              </a>
-              <a
-                href="https://ucoin.ch"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[var(--gold)] font-bold hover:underline inline-flex items-center gap-1"
-              >
-                Ricarica UCOIN <ExternalLink size={12} />
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Collegamento cross-satellite taccuino.ch */}
-        <div className="p-3 bg-[var(--cream)] border border-[var(--line)] rounded-xl text-xs text-[var(--muted)] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-base">🛰️</span>
-            <span>
-              Tutti gli appuntamenti possono generare automaticamente note e verbali su{' '}
-              <b className="text-[var(--ink)]">taccuino.ch</b>.
-            </span>
-          </div>
-          <a
-            href="https://taccuino.ch"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[var(--accent)] font-bold hover:underline whitespace-nowrap ml-2"
-          >
-            Apri taccuino.ch →
-          </a>
-        </div>
-
-        {/* Footer con azione di Logout o Login */}
-        <div className="dlg-foot">
+        <div className="my-4 flex flex-col gap-4">
           {user ? (
+            /* Utente Connesso con USSO */
+            <div className="flex flex-col gap-3">
+              <div className="p-4 rounded-xl border border-[var(--edge)] bg-[var(--paper)] flex flex-col gap-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5">
+                    <ShieldCheck size={16} className="text-[var(--accent)]" /> Identità Sovrana Attiva
+                  </span>
+                  <span className="text-[11px] font-semibold bg-[var(--accent)] text-white px-2.5 py-0.5 rounded-full">
+                    Passkey FIDO2
+                  </span>
+                </div>
+
+                <div className="text-xs text-[var(--muted)] space-y-1.5 pt-1">
+                  {user.name && (
+                    <div className="flex justify-between items-center">
+                      <span>Nome:</span>
+                      <b className="text-[var(--ink)]">{user.name}</b>
+                    </div>
+                  )}
+                  {user.email && (
+                    <div className="flex justify-between items-center">
+                      <span>E-mail:</span>
+                      <b className="text-[var(--ink)]">{user.email}</b>
+                    </div>
+                  )}
+                  {user.nickname && (
+                    <div className="flex justify-between items-center">
+                      <span>Handle:</span>
+                      <b className="text-[var(--ink)] font-mono">@{user.nickname}</b>
+                    </div>
+                  )}
+                </div>
+
+                {user.unhubId && (
+                  <div className="mt-2 pt-2 border-t border-[var(--line)] flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-[var(--muted)] block">
+                        Identificativo Sovrano (unhubId)
+                      </span>
+                      <code className="text-[11px] font-mono font-bold text-[var(--ink)]">
+                        {user.unhubId.length > 24
+                          ? `${user.unhubId.slice(0, 12)}...${user.unhubId.slice(-8)}`
+                          : user.unhubId}
+                      </code>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyUnhubId}
+                      className="btn line text-xs h-7 px-2 flex items-center gap-1"
+                      title="Copia identificativo"
+                    >
+                      {copiedId ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
+                      {copiedId ? 'Copiato' : 'Copia'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Link Gestione USSO */}
+              <div className="flex items-center justify-between text-xs px-1 text-[var(--muted)]">
+                <a
+                  href="https://usso.ch/account"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[var(--accent)] hover:underline font-medium"
+                >
+                  Gestisci il tuo profilo su usso.ch <ExternalLink size={12} />
+                </a>
+                <a
+                  href="https://usso.ch/permissions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[var(--muted)] hover:underline"
+                >
+                  Permessi concessi <ExternalLink size={12} />
+                </a>
+              </div>
+            </div>
+          ) : (
+            /* Utente Ospite / Non Connesso */
+            <div className="p-5 rounded-xl border border-[var(--edge)] bg-[var(--paper)] text-center flex flex-col items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-[var(--cream)] border border-[var(--edge)] flex items-center justify-center text-[var(--ink)]">
+                <KeyRound size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[var(--ink)] mb-1">
+                  Accesso Sovrano Senza Password
+                </h3>
+                <p className="text-xs text-[var(--muted)] max-w-sm m-0">
+                  Accedi con la tua Passkey biometrica FIDO2 (Touch ID, Face ID o chiave hardware) per gestire il tuo calendario e condividere i tuoi slot.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  login();
+                  onClose();
+                }}
+                className="btn dark text-xs h-9 px-4 flex items-center gap-2 mt-1"
+              >
+                <ShieldCheck size={15} /> Accedi con USSO (Passkey FIDO2)
+              </button>
+            </div>
+          )}
+
+          {/* Collegamento Taccuino rapido */}
+          <div className="p-3 bg-[var(--paper)] border border-[var(--line)] rounded-xl flex items-center justify-between text-xs text-[var(--muted)]">
+            <span className="flex items-center gap-2">
+              <StickyNote size={15} className="text-[var(--ink)]" />
+              Verbale o appunti d'incontro?
+            </span>
+            <a
+              href="https://taccuino.ch"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--accent)] font-bold hover:underline"
+            >
+              Apri taccuino.ch →
+            </a>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="dlg-foot">
+          {user && (
             <button
               onClick={() => {
                 logout();
                 onClose();
               }}
-              className="btn line text-[var(--accent)] hover:bg-[var(--accent-soft)] hover:border-[var(--accent)]"
+              className="btn line text-[var(--accent)] hover:bg-[var(--accent-soft)] hover:border-[var(--accent)] text-xs h-9"
             >
               <LogOut size={15} /> Esci da USSO
             </button>
-          ) : (
-            <button
-              onClick={() => {
-                login();
-                onClose();
-              }}
-              className="btn dark"
-            >
-              <ShieldCheck size={15} /> Accedi con USSO (Passkey FIDO2)
-            </button>
           )}
           <span className="spacer" />
-          <button className="btn line" onClick={onClose}>
+          <button className="btn line text-xs h-9 px-4" onClick={onClose}>
             Chiudi
           </button>
         </div>

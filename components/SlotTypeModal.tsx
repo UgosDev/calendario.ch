@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { SlotType, SlotPlace } from '../types';
-import { chfToUcoin, formatUcoin } from '../services/ucoinService';
 import { X, Check } from 'lucide-react';
 
 interface Props {
@@ -65,8 +64,6 @@ export const SlotTypeModal: React.FC<Props> = ({ slotType, onSave, onClose }) =>
       return;
     }
 
-    const calculatedUcoin = chfToUcoin(priceChf);
-
     const updated: SlotType = {
       id: slotType?.id || uid(),
       name: name.trim(),
@@ -82,7 +79,6 @@ export const SlotTypeModal: React.FC<Props> = ({ slotType, onSave, onClose }) =>
       place,
       desc: desc.trim(),
       priceChf: Number(priceChf),
-      priceUcoin: calculatedUcoin,
       active: slotType ? slotType.active : true,
       showInCal: slotType ? slotType.showInCal : true
     };
@@ -276,31 +272,26 @@ export const SlotTypeModal: React.FC<Props> = ({ slotType, onSave, onClose }) =>
             </label>
           </div>
 
-          {/* Tariffazione UCOIN / TWINT */}
+          {/* Tariffa Incontro in CHF */}
           <div className="p-3 bg-[var(--paper)] border border-[var(--edge)] rounded-xl flex items-center justify-between gap-4">
             <div className="flex-1">
               <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)] block">
                 Tariffa Incontro (Opzionale)
               </span>
               <span className="text-xs text-[var(--muted)]">
-                Se impostata, il cliente può saldare con TWINT o con il borsellino UCOIN.
+                Lascia a 0 per incontri gratuiti o imposta l'onorario in franchi svizzeri.
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-[var(--cream)] border border-[var(--edge)] rounded-lg px-2.5 py-1">
-                <span className="text-xs font-bold text-[var(--ink)]">CHF</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={5}
-                  value={priceChf}
-                  onChange={(e) => setPriceChf(Math.max(0, Number(e.target.value)))}
-                  className="w-16 border-0 bg-transparent font-bold text-sm text-right focus:outline-none"
-                />
-              </div>
-              <span className="text-xs font-semibold text-[var(--gold)]">
-                ({formatUcoin(chfToUcoin(priceChf))})
-              </span>
+            <div className="flex items-center gap-1.5 bg-[var(--cream)] border border-[var(--edge)] rounded-lg px-2.5 py-1">
+              <span className="text-xs font-bold text-[var(--ink)]">CHF</span>
+              <input
+                type="number"
+                min={0}
+                step={5}
+                value={priceChf}
+                onChange={(e) => setPriceChf(Math.max(0, Number(e.target.value)))}
+                className="w-16 border-0 bg-transparent font-bold text-sm text-right focus:outline-none"
+              />
             </div>
           </div>
 

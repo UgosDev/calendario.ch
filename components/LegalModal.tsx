@@ -102,8 +102,7 @@ export const LegalModal: React.FC<Props> = ({ isOpen, onClose, defaultTab = 'pri
               <p>
                 <b>Ecosistema:</b> UnHub Svizzera<br />
                 <b>Infrastruttura:</b> pagine.ch (Caddy Edge Svizzera) & Infomaniak Network SA (Ginevra)<br />
-                <b>Identità & Autenticazione:</b> USSO.ch (Universal Sovereign SSO, Passkeys FIDO2)<br />
-                <b>Custodia Documentale:</b> Archivio.ch (Bunker Ginevra dc4-a)
+                <b>Identità & Autenticazione:</b> USSO.ch (Universal Sovereign SSO, Passkeys FIDO2)
               </p>
               <p>
                 <b>Contatto supporto & DPO:</b> privacy@calendario.ch / info@unhub.ch

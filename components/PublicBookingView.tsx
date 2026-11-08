@@ -13,7 +13,7 @@ import {
 } from '../services/swissHolidays';
 import { calculateFreeSlots } from '../services/calendarEngine';
 import { generateIcs, downloadFile } from '../services/vaultService';
-import { formatChf, formatUcoin } from '../services/ucoinService';
+import { formatChf } from '../services/ucoinService';
 import { LegalModal } from './LegalModal';
 import {
   Calendar,
@@ -254,7 +254,7 @@ export const PublicBookingView: React.FC<Props> = ({
 
         <div className="pt-4 border-t border-[var(--line)] flex items-center justify-center gap-2 text-xs text-[var(--muted)]">
           <ShieldCheck size={14} className="text-[var(--ink)]" />
-          <span>calendario.ch • Dati custoditi su Archivio.ch (Bunker Ginevra)</span>
+          <span>calendario.ch • Piattaforma di Scheduling Sovrano Svizzero</span>
         </div>
       </div>
     );
