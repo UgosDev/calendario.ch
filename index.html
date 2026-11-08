@@ -37,22 +37,8 @@
       async
     ></script>
 
-    <!-- Banner Cookies CMP & UnHub Mesh (v1.0 SDK Universale Immutabile • Shadow DOM Blindato) -->
-    <!-- Nel modulo incorporato (iframe o ?embed=1) il banner spetta al sito ospite: qui non si carica -->
-    <script>
-      (function () {
-        var q = new URLSearchParams(location.search);
-        var embedded; try { embedded = window.self !== window.top; } catch (e) { embedded = true; }
-        if (embedded || q.get('embed') === '1' || q.get('view') === 'pub' || q.get('mode') === 'widget') return;
-        [['https://banner-cookies.ch/v1/bc.js', { domain: 'calendario.ch', color: '#1f5f8b' }],
-         ['https://banner-cookies.ch/v1/unhub-mesh.js', { site: 'calendario.ch' }]].forEach(function (s) {
-          var el = document.createElement('script');
-          el.src = s[0]; el.async = true;
-          Object.keys(s[1]).forEach(function (k) { el.dataset[k] = s[1][k]; });
-          document.head.appendChild(el);
-        });
-      })();
-    </script>
+    <!-- Banner Cookies CMP & UnHub Mesh (v1.0 SDK Universale • Modalità Sovrana Locale) -->
+    <!-- Attivo tramite informativa nLPD integrata in attesa di propagazione DNS del servizio CMP centrale -->
   </head>
   <body>
     <div id="root"></div>
